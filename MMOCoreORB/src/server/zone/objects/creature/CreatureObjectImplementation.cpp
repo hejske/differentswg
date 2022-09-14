@@ -1026,10 +1026,12 @@ int CreatureObjectImplementation::inflictDamage(TangibleObject* attacker, int da
 }
 
 int CreatureObjectImplementation::inflictDamage(TangibleObject* attacker, int damageType, float damage, bool destroy, bool notifyClient, bool isCombatAction) {
-	if (damageType < 0 || damageType >= hamList.size()) {
-		error("incorrect damage type in CreatureObjectImplementation::inflictDamage");
-		return 0;
-	}
+	// if (damageType < 0 || damageType >= hamList.size()) {
+	// 	error("incorrect damage type in CreatureObjectImplementation::inflictDamage");
+	// 	return 0;
+	// }
+	if (!isAiAgent())
+		damageType = 0;
 
 	if ((isIncapacitated() && !isFeigningDeath()) || this->isDead() || isInvulnerable() || damage == 0)
 		return 0;
@@ -1044,8 +1046,8 @@ int CreatureObjectImplementation::inflictDamage(TangibleObject* attacker, int da
 	if (getSkillMod("avoid_incapacitation") > 0 && newValue <= 0)
 		newValue = 1;
 
-	if (damageType % 3 != 0 && newValue < 0) // secondaries never should go negative
-		newValue = 0;
+	// if (damageType % 3 != 0 && newValue < 0) // secondaries never should go negative
+	// 	newValue = 0;
 
 
 	// This is used to trigger checkpoint observers on screenplay mobs when they reach a certain percent threshold
@@ -1096,10 +1098,19 @@ int CreatureObjectImplementation::healDamage(TangibleObject* healer, int damageT
 	if (damage == 0)
 		return 0;
 
-	if (damageType < 0 || damageType >= hamList.size()) {
-		error("incorrect damage type in CreatureObjectImplementation::healDamage");
-		return 0;
+	int bf = getShockWounds();
+	if (bf > 0) {
+		if(bf > 900)
+			bf = 900;
+
+		damage *= (1 - bf / 1000);
 	}
+
+	damageType = 0;
+	// if (damageType < 0 || damageType >= hamList.size()) {
+	// 	error("incorrect damage type in CreatureObjectImplementation::healDamage");
+	// 	return 0;
+	// }
 
 	int returnValue = damage;
 
@@ -1247,23 +1258,25 @@ int CreatureObjectImplementation::addWounds(int type, int value, bool notifyClie
 
 	int returnValue = value;
 
-	int currentValue = wounds.get(type);
+	//might use wounds for other stuff eventually
 
-	int newValue = currentValue + value;
+	// int currentValue = wounds.get(type);
 
-	if (newValue < 0)
-		returnValue = -currentValue;
+	// int newValue = currentValue + value;
 
-	if (newValue >= baseHAM.get(type))
-		returnValue = baseHAM.get(type) - 1 - currentValue;
+	// if (newValue < 0)
+	// 	returnValue = -currentValue;
 
-	if (value > 0 && asCreatureObject()->isPlayerCreature())
-		sendStateCombatSpam("cbt_spam", "wounded", 1, value, false);
+	// if (newValue >= baseHAM.get(type))
+	// 	returnValue = baseHAM.get(type) - 1 - currentValue;
 
-	setWounds(type, newValue, notifyClient);
+	// if (value > 0 && asCreatureObject()->isPlayerCreature())
+	// 	sendStateCombatSpam("cbt_spam", "wounded", 1, value, false);
 
-	if (doShockWounds)
-		addShockWounds(1, true);
+	// setWounds(type, newValue, notifyClient);
+
+	// if (doShockWounds)
+	// 	addShockWounds(1, true);
 
 	return returnValue;
 }
@@ -1475,6 +1488,7 @@ void CreatureObjectImplementation::addSkillMod(const int modType, const String& 
 	Locker locker(&skillModMutex);
 
 	SkillModEntry oldMod;
+	int oldModValue = getSkillMod(skillMod);
 
 	if (skillModList.contains(skillMod)) {
 		oldMod = skillModList.get(skillMod);
@@ -1487,6 +1501,9 @@ void CreatureObjectImplementation::addSkillMod(const int modType, const String& 
 	if (newMod == oldMod) {
 		return;
 	}
+
+	String modName = skillMod;
+	checkForSpecialMods(modName, value, oldModValue);
 
 	if (notifyClient) {
 		CreatureObjectDeltaMessage4* msg = new CreatureObjectDeltaMessage4(asCreatureObject());
@@ -1507,6 +1524,32 @@ void CreatureObjectImplementation::addSkillMod(const int modType, const String& 
 		else
 			skillModList.drop(skillMod);
 	}
+}
+
+void CreatureObjectImplementation::checkForSpecialMods(String modName, int value, int oldValue) {	
+	
+	if (modName == "health_mod") {
+		addMaxHAM(0, value * (1 + getSkillMod("increased_health") / 100.f));
+	}
+
+	else if (modName == "mind_mod") {
+		addMaxHAM(6, value * (1 + getSkillMod("increased_mind") / 100.f));
+	}
+
+	else if (modName == "increased_health") {
+		setMaxHAM(0, getMaxHAM(0) / (1 + oldValue / 100.f) * (1 + value / 100.f));
+	}
+
+	else if (modName == "increased_mind") {
+		setMaxHAM(6, getMaxHAM(0) / (1 + oldValue / 100.f) * (1 + value / 100.f));
+	}
+
+	// if (modName == "private_run_speed_mod") {
+	// 	updateRunSpeedMod(value);
+	// }
+	// else if (mod == "private_base_move_speed_mod") {
+	// 	updateBaseMoveSpeedMultiMod(value);
+	// }
 }
 
 void CreatureObjectImplementation::removeSkillMod(const int modType, const String& skillMod, int value, bool notifyClient) {
@@ -2195,16 +2238,36 @@ void CreatureObjectImplementation::notifyPositionUpdate(QuadTreeEntry* entry) {
 }
 
 int CreatureObjectImplementation::notifyObjectInserted(SceneObject* object) {
-	if (object->isWeaponObject())
-		setWeapon( cast<WeaponObject*> (object));
-
+	if (object->isWeaponObject()) {
+		int arrangementSize = object->getArrangementDescriptorSize();
+		for (int i = 0; i < arrangementSize; ++i) {
+			const Vector<String>* descriptors = object->getArrangementDescriptor(i);
+			for (int j = 0; j < descriptors->size(); ++j) {
+				const String& childArrangement = descriptors->get(j);
+				if (childArrangement.contains("hold_r")) {
+					setWeapon( cast<WeaponObject*> (object), true);
+					return TangibleObjectImplementation::notifyObjectInserted(object);
+				}
+			}
+		}
+	}
 	return TangibleObjectImplementation::notifyObjectInserted(object);
 }
 
 int CreatureObjectImplementation::notifyObjectRemoved(SceneObject* object) {
-	if (object->isWeaponObject())
-		setWeapon( nullptr);
-
+	if (object->isWeaponObject()) {
+		int arrangementSize = object->getArrangementDescriptorSize();
+		for (int i = 0; i < arrangementSize; ++i) {
+			const Vector<String>* descriptors = object->getArrangementDescriptor(i);
+			for (int j = 0; j < descriptors->size(); ++j) {
+				const String& childArrangement = descriptors->get(j);
+				if (childArrangement.contains("hold_r")) {
+					setWeapon( nullptr, true);
+					return TangibleObjectImplementation::notifyObjectInserted(object);
+				}
+			}
+		}
+	}
 	return TangibleObjectImplementation::notifyObjectInserted(object);
 }
 
@@ -2274,7 +2337,8 @@ float CreatureObjectImplementation::calculateBFRatio() const {
 	else if (bfRatio < 0.25f)
 		bfRatio = 0.25f;
 
-	return bfRatio;
+	//return bfRatio;
+	return 1;
 }
 
 void CreatureObjectImplementation::removeFeignedDeath() {
@@ -2802,24 +2866,44 @@ void CreatureObjectImplementation::activateHAMRegeneration(int latency) {
 
 	// this formula gives the amount of regen per second
 	uint32 healthTick = (uint32) ceil((float) Math::max(0, getHAM(
-			CreatureAttribute::CONSTITUTION)) * 13.0f / 2100.0f * modifier);
-	uint32 actionTick = (uint32) ceil((float) Math::max(0, getHAM(
-			CreatureAttribute::STAMINA)) * 13.0f / 2100.0f * modifier);
+			CreatureAttribute::CONSTITUTION)) * 13.0f / 2100.0f * modifier * (1 + getSkillMod("health_regeneration") / 100.f));
+
+
+	// uint32 actionTick = (uint32) ceil((float) Math::max(0, getHAM(
+	// 		CreatureAttribute::STAMINA)) * 13.0f / 2100.0f * modifier);
 	uint32 mindTick = (uint32) ceil((float) Math::max(0, getHAM(
-			CreatureAttribute::WILLPOWER)) * 13.0f / 2100.0f * modifier);
+			CreatureAttribute::WILLPOWER)) * 13.0f / 2100.0f * modifier * (1 + getSkillMod("mind_regeneration") / 100.f));
+
+	if (!isInCombat()) {
+		healthTick *= 5;
+		mindTick *= 2;
+	}
 
 	if (healthTick < 1)
 		healthTick = 1;
 
-	if (actionTick < 1)
-		actionTick = 1;
+	// if (actionTick < 1)
+	// 	actionTick = 1;
 
 	if (mindTick < 1)
 		mindTick = 1;
 
+	int action = getHAM(CreatureAttribute::ACTION);
+	if (action > 1 && !isInCombat()) {
+		int maxAction = getMaxHAM(CreatureAttribute::ACTION);
+		int actionDamage = maxAction / 100.f;
+		if (action > actionDamage) {
+			inflictDamageAll(asCreatureObject(), CreatureAttribute::ACTION, actionDamage, false, true, false);
+		}
+		else {
+			setHAM(CreatureAttribute::ACTION, 1, true);
+		}
+		
+	}
+
 	healDamage(asCreatureObject(), CreatureAttribute::HEALTH, healthTick, true, false);
-	healDamage(asCreatureObject(), CreatureAttribute::ACTION, actionTick, true, false);
-	healDamage(asCreatureObject(), CreatureAttribute::MIND, mindTick, true, false);
+	//healDamage(asCreatureObject(), CreatureAttribute::ACTION, actionTick, true, false);
+	healDamageAll(asCreatureObject(), CreatureAttribute::MIND, mindTick, true, false);
 
 	activatePassiveWoundRegeneration();
 }
@@ -4212,4 +4296,216 @@ Instrument* CreatureObjectImplementation::getPlayableInstrument() {
 
 void CreatureObjectImplementation::setClient(ZoneClientSession* cli) {
 	owner = cli;
+}
+
+int CreatureObjectImplementation::inflictDamageAll(TangibleObject* attacker, int damageType, float damage, bool destroy, bool notifyClient, bool isCombatAction) {
+	if (damageType < 0 || damageType >= hamList.size()) {
+		error("incorrect damage type in CreatureObjectImplementation::inflictDamage");
+		return 0;
+	}
+
+	if ((isIncapacitated() && !isFeigningDeath()) || this->isDead() || damage == 0)
+		return 0;
+
+	int currentValue = hamList.get(damageType);
+
+	int newValue = currentValue - (int) damage;
+
+	if (!destroy && newValue <= 0)
+		newValue = 1;
+
+	if (getSkillMod("avoid_incapacitation") > 0 && newValue <= 0)
+		newValue = 1;
+
+	if (damageType % 3 != 0 && newValue < 0) // secondaries never should go negative
+		newValue = 0;
+
+	setHAM(damageType, newValue, notifyClient);
+
+	if (attacker == nullptr)
+		attacker = asCreatureObject();
+
+	if (newValue <= 0)
+		notifyObjectDestructionObservers(attacker, newValue, isCombatAction);
+
+	return 0;
+}
+
+int CreatureObjectImplementation::healDamageAll(TangibleObject* healer,
+		int damageType, int damage, bool notifyClient, bool notifyObservers) {
+	if (damage == 0)
+		return 0;
+
+	if (damageType < 0 || damageType >= hamList.size()) {
+		error("incorrect damage type in CreatureObjectImplementation::healDamage");
+		return 0;
+	}
+
+	int returnValue = damage;
+
+	int currentValue = hamList.get(damageType);
+
+	int newValue = currentValue + damage;
+
+	int maxValue = maxHamList.get(damageType) - wounds.get(damageType);
+
+	if (newValue > maxValue)
+		returnValue = maxValue - currentValue;
+
+	newValue = Math::min(newValue, maxValue);
+
+	if (currentValue <= 0 && (isIncapacitated() || isDead())) {
+		if (newValue <= 0)
+			newValue = 1;
+
+		if (damageType % 3 == 0) {
+
+			setPosture(CreaturePosture::UPRIGHT);
+
+			asCreatureObject()->notifyObservers(ObserverEventType::CREATUREREVIVED, healer, 0);
+
+			if(isPlayerCreature()) {
+
+				PlayerObject* ghost = getPlayerObject();
+
+				if (ghost->getForcePowerMax() > 0 && ghost->getForcePower() < ghost->getForcePowerMax()) {
+					ghost->activateForcePowerRegen();
+				}
+			}
+
+			if (isPet()) {
+				AiAgent* pet = asAiAgent();
+				ManagedReference<CreatureObject*> player = getLinkedCreature().get();
+
+				if (pet != nullptr && player != nullptr) {
+					pet->setFollowObject(player);
+					pet->activateMovementEvent();
+				}
+			}
+		}
+	}
+
+	if (damageType % 3 != 0 && newValue < 0)
+		newValue = 0;
+
+	setHAM(damageType, newValue, notifyClient);
+
+	if(healer != nullptr && notifyObservers) {
+		asCreatureObject()->notifyObservers(ObserverEventType::HEALINGRECEIVED, healer, returnValue);
+	}
+
+	return returnValue;
+}
+
+void CreatureObjectImplementation::checkForSpecialMods(String& modName, int value) {	
+	String mod = modName;
+	if (mod == "private_run_speed_mod") {
+		updateRunSpeedMod(value);
+	}
+	else if (mod == "private_base_move_speed_mod") {
+		updateBaseMoveSpeedMultiMod(value);
+	}
+}
+
+bool CreatureObjectImplementation::isWearingArmor() {
+	ManagedReference<CreatureObject*> creo = asCreatureObject();
+	for (int i = 0; i < creo->getSlottedObjectsSize(); ++i) {
+		SceneObject* item = creo->getSlottedObject(i);
+		if (item != nullptr && item->isArmorObject())
+			return true;
+	}
+
+	return false;
+}
+
+bool CreatureObjectImplementation::isDualWieldingLightsabers() {
+	ManagedReference<CreatureObject*> creo = asCreatureObject();
+	ManagedReference<WeaponObject*> wep = creo->getWeapon();
+	ManagedReference<WeaponObject*> offHand = creo->getOffHandWeapon();
+	if (wep != nullptr && wep->isJediWeapon() && offHand != nullptr && offHand->isJediWeapon() && offHand != wep) {
+		return true;
+	}
+
+	return false;
+}
+
+bool CreatureObjectImplementation::isDualWielding() {
+	ManagedReference<CreatureObject*> creo = asCreatureObject();
+	ManagedReference<WeaponObject*> wep = creo->getWeapon();
+	ManagedReference<WeaponObject*> offHand = creo->getOffHandWeapon();
+	if (wep != nullptr && offHand != nullptr && wep != offHand) {
+		return true;
+	}
+
+	return false;
+}
+
+bool CreatureObjectImplementation::hasOffHandWeapon() {
+	ManagedReference<CreatureObject*> creo = asCreatureObject();
+	ManagedReference<WeaponObject*> offHand = creo->getOffHandWeapon();
+	if (offHand != nullptr) {
+		return true;
+	}
+	return false;
+}
+
+Reference<WeaponObject*> CreatureObjectImplementation::getOffHandWeapon() {
+	ManagedReference<CreatureObject*> creo = asCreatureObject();
+	ManagedReference<WeaponObject*> offHand = creo->getSlottedObject("hold_l").castTo<WeaponObject*>();
+	if (offHand != nullptr) {
+		int arrangementSize = offHand->getArrangementDescriptorSize();
+		for (int i = 0; i < arrangementSize; ++i) {
+			const Vector<String>* descriptors = offHand->getArrangementDescriptor(i);
+			for (int j = 0; j < descriptors->size(); ++j) {
+				const String& childArrangement = descriptors->get(j);
+				if (childArrangement.contains("hold_r")) {
+					return nullptr;
+				}
+			}
+		}
+		return offHand;
+	}
+	return nullptr;
+}
+
+void CreatureObjectImplementation::updateBaseMoveSpeedMultiMod(int value) {
+	ManagedReference<CreatureObject*> creo = asCreatureObject();
+	float baseMovementSpeed = creo->getSpeedMultiplierBase();
+	//shouldn't happen?
+	if (baseMovementSpeed > 1)
+		baseMovementSpeed = 1;
+
+	if (value < 0) {
+			
+		baseMovementSpeed *= 100.f / (100 + value);
+		if (baseMovementSpeed > 1) {
+			baseMovementSpeed = 1;
+		}
+		creo->setSpeedMultiplierBase(baseMovementSpeed, true);
+	}
+	else if (value > 0) {
+		baseMovementSpeed *= (1 - value / 100.f);
+		if (baseMovementSpeed > 1)
+			baseMovementSpeed = 1;
+		creo->setSpeedMultiplierBase(baseMovementSpeed, true);
+	}
+}
+
+void CreatureObjectImplementation::updateRunSpeedMod(int value) {
+	ManagedReference<CreatureObject*> creo = asCreatureObject();
+	float runSpeed = creo->getRunSpeed();
+	float defaultSpeed = CreatureObjectImplementation::DEFAULTRUNSPEED;
+	SharedObjectTemplate* templateData = creo->getObjectTemplate();
+	SharedCreatureObjectTemplate* playerTemplate = dynamic_cast<SharedCreatureObjectTemplate*> (templateData);
+	if (playerTemplate != nullptr) {
+		Vector<FloatParam> speedTempl = playerTemplate->getSpeed();
+		defaultSpeed = speedTempl.get(0);
+	}
+
+	runSpeed += defaultSpeed * value / 100.f;
+	//it was used for slows (not intended), need better solution prolly
+	if (runSpeed < 0) {
+		runSpeed == 0.001;
+	}
+	creo->setRunSpeed(runSpeed, true);
 }

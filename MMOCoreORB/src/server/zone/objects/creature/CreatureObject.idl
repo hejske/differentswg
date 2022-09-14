@@ -2261,4 +2261,36 @@ class CreatureObject extends TangibleObject {
 
 	@local
 	public native Instrument getPlayableInstrument();
+
+	@preLocked
+	@arg1preLocked
+	public native int inflictDamageAll(TangibleObject attacker, int damageType, float damage, boolean destroy, boolean notifyClient = true, boolean isCombatAction = false);
+
+	@preLocked
+	public native int healDamageAll(TangibleObject healer, int damageType, int damage, boolean notifyClient = true, boolean notifyObservers = true);
+
+	public native void checkForSpecialMods(string name, int value, int oldValue);
+
+	@preLocked
+	public native void updateBaseMoveSpeedMultiMod(int value);
+
+	@preLocked
+	public native void updateRunSpeedMod(int value);
+	
+	@preLocked
+	public native boolean isDualWieldingLightsabers();
+
+	@prelocked
+	public native boolean isDualWielding();
+
+	@preLocked
+	public native boolean hasOffHandWeapon();
+
+	@reference
+	@dirty
+	@preLocked
+	public native WeaponObject getOffHandWeapon();
+
+	@prelocked
+	public native boolean isWearingArmor();
 }
