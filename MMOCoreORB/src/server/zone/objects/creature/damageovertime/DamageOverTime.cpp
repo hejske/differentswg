@@ -10,6 +10,7 @@
 #include "DamageOverTime.h"
 #include "server/zone/ZoneServer.h"
 #include "server/zone/managers/combat/CombatManager.h"
+#include "server/zone/objects/player/PlayerObject.h"
 
 DamageOverTime::DamageOverTime() {
 	setAttackerID(0);
@@ -121,23 +122,23 @@ uint32 DamageOverTime::applyDot(CreatureObject* victim) {
 	switch(type) {
 	case CreatureState::BLEEDING:
 		power = doBleedingTick(victim, attacker);
-		nextTick.addMiliTime(20000);
+		nextTick.addMiliTime(2000);
 		break;
 	case CreatureState::POISONED:
 		power = doPoisonTick(victim, attacker);
-		nextTick.addMiliTime(10000);
+		nextTick.addMiliTime(2000);
 		break;
 	case CreatureState::DISEASED:
 		power = doDiseaseTick(victim, attacker);
-		nextTick.addMiliTime(40000);
+		nextTick.addMiliTime(2000);
 		break;
 	case CreatureState::ONFIRE:
 		power = doFireTick(victim, attacker);
-		nextTick.addMiliTime(10000);
+		nextTick.addMiliTime(2000);
 		break;
 	case CommandEffect::FORCECHOKE:
 		power = doForceChokeTick(victim, attacker);
-		nextTick.addMiliTime(5000);
+		nextTick.addMiliTime(3000);
 		break;
 	}
 
@@ -152,22 +153,22 @@ uint32 DamageOverTime::initDot(CreatureObject* victim, CreatureObject* attacker)
 	switch(type) {
 	case CreatureState::BLEEDING:
 		absorptionMod = Math::max(0, Math::min(50, victim->getSkillMod("absorption_bleeding")));
-		nextTick.addMiliTime(20000);
+		nextTick.addMiliTime(2000);
 		break;
 	case CreatureState::ONFIRE:
 		absorptionMod = Math::max(0, Math::min(50, victim->getSkillMod("absorption_fire")));
-		nextTick.addMiliTime(10000);
+		nextTick.addMiliTime(2000);
 		break;
 	case CreatureState::POISONED:
 		absorptionMod = Math::max(0, Math::min(50, victim->getSkillMod("absorption_poison")));
-		nextTick.addMiliTime(10000);
+		nextTick.addMiliTime(2000);
 		break;
 	case CreatureState::DISEASED:
 		absorptionMod = Math::max(0, Math::min(50, victim->getSkillMod("absorption_disease")));
-		nextTick.addMiliTime(40000);
+		nextTick.addMiliTime(2000);
 		break;
 	case CommandEffect::FORCECHOKE:
-		nextTick.addMiliTime(5000);
+		nextTick.addMiliTime(3000);
 		strength *= ((100 - System::random(20)) * 0.01f);
 		victim->showFlyText("combat_effects", "choke", 0xFF, 0, 0);
 
@@ -232,10 +233,11 @@ uint32 DamageOverTime::doFireTick(CreatureObject* victim, CreatureObject* attack
 		damage = attr - 1;
 	}
 
-	int woundsToApply = (int)(secondaryStrength * ((100.f + victim->getShockWounds()) / 100.0f));
-	int maxWoundsToApply = victim->getBaseHAM(attribute) - 1 - victim->getWounds(attribute);
+	// int woundsToApply = (int)(secondaryStrength * ((100.f + victim->getShockWounds()) / 100.0f));
+	// int maxWoundsToApply = victim->getBaseHAM(attribute) - 1 - victim->getWounds(attribute);
 
-	woundsToApply = Math::min(woundsToApply, maxWoundsToApply);
+	// woundsToApply = Math::min(woundsToApply, maxWoundsToApply);
+	int woundsToApply = 0;
 
 	Reference<CreatureObject*> attackerRef = attacker;
 	Reference<CreatureObject*> victimRef = victim;
@@ -247,16 +249,16 @@ uint32 DamageOverTime::doFireTick(CreatureObject* victim, CreatureObject* attack
 
 		Locker crossLocker(attackerRef, victimRef);
 
-		if (woundsToApply > 0) {
-			// need to do damage to account for wounds first, or it will possibly get
-			// applied twice
-			if (attribute % 3 == 0)
-				victimRef->inflictDamage(attackerRef, attribute, woundsToApply, true, "dotDMG", true, false);
+		// if (woundsToApply > 0) {
+		// 	// need to do damage to account for wounds first, or it will possibly get
+		// 	// applied twice
+		// 	if (attribute % 3 == 0)
+		// 		victimRef->inflictDamage(attackerRef, attribute, woundsToApply, true, "dotDMG", true, false);
 
-			victimRef->addWounds(attribute, woundsToApply, true, false);
-		}
+		// 	victimRef->addWounds(attribute, woundsToApply, true, false);
+		// }
 
-		victimRef->addShockWounds((int)(secondaryStrength * 0.075f));
+		//victimRef->addShockWounds((int)(secondaryStrength * 0.075f));
 
 		victimRef->inflictDamage(attackerRef, attribute - attribute % 3, damage, true, "dotDMG", true, false);
 		if (victimRef->hasAttackDelay())
@@ -331,10 +333,10 @@ uint32 DamageOverTime::doDiseaseTick(CreatureObject* victim, CreatureObject* att
 			if (attribute % 3 == 0)
 				victimRef->inflictDamage(attackerRef, attribute, damage, true, "dotDMG", true, false);
 
-			victimRef->addWounds(attribute, damage, true, false);
+			//victimRef->addWounds(attribute, damage, true, false);
 		}
 
-		victimRef->addShockWounds((int)(strength * 0.075f));
+		//victimRef->addShockWounds((int)(strength * 0.075f));
 
 		if (victimRef->hasAttackDelay())
 			victimRef->removeAttackDelay();
@@ -373,15 +375,15 @@ uint32 DamageOverTime::doForceChokeTick(CreatureObject* victim, CreatureObject* 
 			CombatManager::instance()->sendMitigationCombatSpam(victimRef, nullptr, (int)jediBuffDamage, CombatManager::FORCESHIELD);
 		}
 
-		//PSG with lightsaber resistance only
-		ManagedReference<ArmorObject*> psg = CombatManager::instance()->getPSGArmor(victimRef);
-		if (psg != nullptr && !psg->isVulnerable(SharedWeaponObjectTemplate::LIGHTSABER)) {
-			float armorReduction =  CombatManager::instance()->getArmorObjectReduction(psg, SharedWeaponObjectTemplate::LIGHTSABER);
+		// //PSG with lightsaber resistance only
+		// ManagedReference<ArmorObject*> psg = CombatManager::instance()->getPSGArmor(victimRef);
+		// if (psg != nullptr && !psg->isVulnerable(SharedWeaponObjectTemplate::LIGHTSABER)) {
+		// 	float armorReduction =  CombatManager::instance()->getArmorObjectReduction(psg, SharedWeaponObjectTemplate::LIGHTSABER);
 
-		if (armorReduction > 0)
-			chokeDam *= 1.f - (armorReduction / 100.f);
+		// if (armorReduction > 0)
+		// 	chokeDam *= 1.f - (armorReduction / 100.f);
 
-		}
+		// }
 
 		CombatManager::instance()->broadcastCombatSpam(attackerRef, victimRef, nullptr, chokeDam, "cbt_spam", "forcechoke_hit", 1);
 		victimRef->inflictDamage(attackerRef, attribute, chokeDam, true, "dotDMG", true, false);
