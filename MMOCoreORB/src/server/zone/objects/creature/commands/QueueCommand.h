@@ -145,6 +145,7 @@ public:
 
 	virtual float getCommandDuration(CreatureObject* object, const UnicodeString& arguments) const {
 		// TODO: modify this value by skill, probably need to specify which skill affects what in luas
+		
 		return defaultTime;
 	}
 

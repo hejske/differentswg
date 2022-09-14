@@ -48,6 +48,7 @@ protected:
 	float frsLightMaxDamageModifier;
 	float frsDarkMinDamageModifier;
 	float frsDarkMaxDamageModifier;
+	float forcePowersDamageScaling;
 
 	int coneRange;
 	int range;
@@ -73,6 +74,8 @@ protected:
 	uint8 animType;
 
 	uint32 weaponType;
+
+	bool dualWieldAttack;
 
 public:
 	enum AnimGenTypes {
@@ -100,6 +103,8 @@ public:
 		frsLightMaxDamageModifier = 0;
 		frsDarkMinDamageModifier = 0;
 		frsDarkMaxDamageModifier = 0;
+
+		forcePowersDamageScaling = 0;
 
 		// Force Power is only set in Jedi-skills.
 		forceCostMultiplier = 0;
@@ -131,6 +136,8 @@ public:
 		trails = CombatManager::DEFAULTTRAIL;
 
 		weaponType = SharedWeaponObjectTemplate::ANYWEAPON;
+
+		dualWieldAttack = false;
 	}
 
 	void onFail(uint32 actioncntr, CreatureObject* creature, uint32 errorNumber) const {
@@ -161,9 +168,30 @@ public:
 				weapon = creature->getWeapon();
 			}
 		}
+		ManagedReference<WeaponObject*> offHand = creature->getOffHandWeapon();
 
-		if (!(getWeaponType() & weapon->getWeaponBitmask()))
-			return INVALIDWEAPON;
+		if (isDualWieldAttack()) {
+
+			if (offHand == nullptr)
+				return INVALIDWEAPON;
+
+			if (!(getWeaponType() & weapon->getWeaponBitmask() & offHand->getWeaponBitmask()))
+				return INVALIDWEAPON;
+
+		}
+		else {
+			if (offHand != nullptr && offHand != weapon) {
+				if (name != "attack") {					
+					return INVALIDWEAPON;
+				}
+			}
+
+			if (!(getWeaponType() & weapon->getWeaponBitmask()))
+				return INVALIDWEAPON;
+		}
+
+
+
 
 		if (rangeToCheck == -1)
 			rangeToCheck = (float) Math::max(10, weapon->getMaxRange());
@@ -414,6 +442,14 @@ public:
 			return "_medium";
 		else
 			return "_light";
+	}
+
+	void setForcePowersDamageScaling(float val) {
+		forcePowersDamageScaling = val;
+	}
+
+	float getForcePowersDamageScaling() const {
+		return forcePowersDamageScaling;
 	}
 
 	String getDefaultAttackAnimation(TangibleObject* attacker, WeaponObject* weapon, uint8 hitLocation, int damage) const {
@@ -867,6 +903,15 @@ public:
 	inline float getFrsDarkMaxDamageModifier() const {
 		return frsDarkMaxDamageModifier;
 	}
+
+	void setDualWieldAttack(bool val) {
+		dualWieldAttack = val;
+	}
+
+	bool isDualWieldAttack() const {
+		return dualWieldAttack;
+	}
+
 };
 
 #endif /* COMBATQUEUECOMMAND_H_ */
