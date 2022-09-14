@@ -280,22 +280,22 @@ public:
 				notifyObservers = false;
 			}
 
-			if (atts.contains(CreatureAttribute::ACTION)) {
-				if (notifyObservers) {
-					actionHealed = targetCreature->healDamage(creature, CreatureAttribute::ACTION, stimPower);
-					notifyObservers = false;
-				} else {
-					actionHealed = targetCreature->healDamage(creature, CreatureAttribute::ACTION, stimPower, true, false);
-				}
-			}
+			// if (atts.contains(CreatureAttribute::ACTION)) {
+			// 	if (notifyObservers) {
+			// 		actionHealed = targetCreature->healDamage(creature, CreatureAttribute::ACTION, stimPower);
+			// 		notifyObservers = false;
+			// 	} else {
+			// 		actionHealed = targetCreature->healDamage(creature, CreatureAttribute::ACTION, stimPower, true, false);
+			// 	}
+			// }
 
-			if (atts.contains(CreatureAttribute::MIND)) {
-				if (notifyObservers) {
-					mindHealed = targetCreature->healDamage(creature, CreatureAttribute::MIND, stimPower);
-				} else {
-					mindHealed = targetCreature->healDamage(creature, CreatureAttribute::MIND, stimPower, true, false);
-				}
-			}
+			// if (atts.contains(CreatureAttribute::MIND)) {
+			// 	if (notifyObservers) {
+			// 		mindHealed = targetCreature->healDamage(creature, CreatureAttribute::MIND, stimPower);
+			// 	} else {
+			// 		mindHealed = targetCreature->healDamage(creature, CreatureAttribute::MIND, stimPower, true, false);
+			// 	}
+			// }
 
 			if (creature->isPlayerCreature()) {
 				PlayerManager* playerManager = server->getZoneServer()->getPlayerManager();
@@ -468,22 +468,22 @@ public:
 			notifyObservers = false;
 		}
 
-		if (atts.contains(CreatureAttribute::ACTION)) {
-			if (notifyObservers) {
-				actionHealed = targetCreature->healDamage(creature, CreatureAttribute::ACTION, stimPower);
-				notifyObservers = false;
-			} else {
-				actionHealed = targetCreature->healDamage(creature, CreatureAttribute::ACTION, stimPower, true, false);
-			}
-		}
+		// if (atts.contains(CreatureAttribute::ACTION)) {
+		// 	if (notifyObservers) {
+		// 		actionHealed = targetCreature->healDamage(creature, CreatureAttribute::ACTION, stimPower);
+		// 		notifyObservers = false;
+		// 	} else {
+		// 		actionHealed = targetCreature->healDamage(creature, CreatureAttribute::ACTION, stimPower, true, false);
+		// 	}
+		// }
 
-		if (atts.contains(CreatureAttribute::MIND)) {
-			if (notifyObservers) {
-				mindHealed = targetCreature->healDamage(creature, CreatureAttribute::MIND, stimPower);
-			} else {
-				mindHealed = targetCreature->healDamage(creature, CreatureAttribute::MIND, stimPower, true, false);
-			}
-		}
+		// if (atts.contains(CreatureAttribute::MIND)) {
+		// 	if (notifyObservers) {
+		// 		mindHealed = targetCreature->healDamage(creature, CreatureAttribute::MIND, stimPower);
+		// 	} else {
+		// 		mindHealed = targetCreature->healDamage(creature, CreatureAttribute::MIND, stimPower, true, false);
+		// 	}
+		// }
 
 		if (creature->isPlayerCreature()) {
 			PlayerManager* playerManager = server->getPlayerManager();
