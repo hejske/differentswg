@@ -13,6 +13,7 @@ include templates.tangible.StimPackTemplate;
 include server.zone.objects.manufactureschematic.craftingvalues.CraftingValues;
 include templates.SharedObjectTemplate;
 include system.lang.String;
+include system.lang.System;
 
 @json
 class StimPack extends PharmaceuticalObject {
@@ -73,7 +74,7 @@ class StimPack extends PharmaceuticalObject {
 		// } else {
 			float modSkill = (float) healer.getSkillMod("healing_injury_treatment") + healer.getSkillMod("increased_healing");
 
-			if (System::random(100) < 5 * (1 + (healer.getSkillmod("increased_stim_healing_critical_chance") + healer.getSkillMod("increased_critical_chance") + attacker->getSkillMod("increased_healing_critical_chance")) / 100.f) + 1.f) {
+			if (System.random(100) < 5 * (1 + (healer.getSkillMod("increased_stim_healing_critical_chance") + healer.getSkillMod("increased_critical_chance") + healer.getSkillMod("increased_healing_critical_chance")) / 100.f) + 1.f) {
 				power *= 1.5 + 0.5 * ((healer.getSkillMod("increased_stim_healing_critical_amount") + healer.getSkillMod("increased_healing_critical_amount")) / 100.f);
 			}
 
