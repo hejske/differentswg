@@ -325,7 +325,62 @@ class PlayerObject extends IntangibleObject {
 	public static final int PVP_RATING_FLOOR = 500;
 	public static final unsigned long PVP_RESET_TIME = 259200000; // 3 days
 
+	protected int abilitySkillPoints;
+	protected int statsSkillPoints;
+	protected int socialSkillPoints;
+	
+	protected float kineticResist;
+	protected float blastResist;
+	protected float acidResist;
+	protected float heatResist;
+	protected float electricityResist;
+	protected float lightsaberResist;
+	protected float stunResist;
+	protected float energyResist;
+	protected float coldResist;
+
+	protected float blockChance;
+	protected float saberBlockChance;
+	protected float counterAttackChance;
+	protected float dodgeChance;
+	protected float toughness;
+	protected float meleeDefenseChance;
+	protected float rangedDefenseChance;
+
+	protected float bleedResist;
+	protected float diseaseResist;
+	protected float fireResist;
+	protected float chokeResist;
+	protected float poisonResist;
+
 	public PlayerObject() {
+		
+		bleedResist = 0;
+		diseaseResist = 0;
+		fireResist = 0;
+		chokeResist = 0;
+		poisonResist = 0;
+		meleeDefenseChance = 0;
+		rangedDefenseChance = 0;
+		blockChance = 0;
+		saberBlockChance = 0;
+		counterAttackChance = 0;
+		dodgeChance = 0;
+		toughness = 0;
+		kineticResist = 0;
+		blastResist = 0;
+		acidResist = 0;
+		electricityResist = 0;
+		heatResist = 0;
+		lightsaberResist = 0;
+		stunResist = 0;
+		energyResist = 0;
+		coldResist = 0;
+
+		abilitySkillPoints = 100;
+		socialSkillPoints = 100;
+		statsSkillPoints = 100;
+
 		playerLogLevel = 4; // INFO
 
 		commandMessageStrings.setNoDuplicateInsertPlan();
@@ -2063,6 +2118,209 @@ class PlayerObject extends IntangibleObject {
 
 		pvpRating = rating;
 	}
+
+	@prelocked
+	public native void updateResists();
+
+	public native void setEnergyResistance(float val) {
+		energyResist = val;
+	}
+
+	@read
+	public native float getEnergyResistance() {
+		return energyResist;
+	}
+
+	public native void setKineticResistance(float val) {
+		kineticResist = val;
+	}
+
+	@read
+	public native float getKineticResistance() {
+		return kineticResist;
+	}
+
+	public native void setBlastResistance(float val) {
+		blastResist = val;
+	}
+
+	@read
+	public native float getBlastResistance() {
+		return blastResist;
+	}
+
+	public native void setStunResistance(float val) {
+		stunResist = val;
+	}
+
+	@read
+	public native float getStunResistance() {
+		return stunResist;
+	}
+
+	public native void setLightsaberResistance(float val) {
+		lightsaberResist = val;
+	}
+
+	@read
+	public native float getLightsaberResistance() {
+		return lightsaberResist;
+	}
+
+	public native void setHeatResistance(float val) {
+		heatResist = val;
+	}
+
+	@read
+	public native float getHeatResistance() {
+		return heatResist;
+	}
+
+	public native void setAcidResistance(float val) {
+		acidResist = val;
+	}
+
+	@read
+	public native float getAcidResistance() {
+		return acidResist;
+	}
+
+	public native void setElectricityResistance(float val) {
+		electricityResist = val;
+	}
+
+	@read
+	public native float getElectricityResistance() {
+		return electricityResist;
+	}
+
+	public native void setColdResistance(float val) {
+		coldResist = val;
+	}
+
+	@read
+	public native float getColdResistance() {
+		return coldResist;
+	}
+
+
+	public native void setBleedResistance(float val) {
+		bleedResist = val;
+	}
+
+	@read
+	public native float getBleedResistance() {
+		return bleedResist;
+	}
+
+
+	public native void setPoisonResistance(float val) {
+		poisonResist = val;
+	}
+
+	@read
+	public native float getPoisonResistance() {
+		return poisonResist;
+	}
+
+
+	public native void setDiseaseResistance(float val) {
+		diseaseResist = val;
+	}
+
+	@read
+	public native float getDiseaseResistance() {
+		return diseaseResist;
+	}
+
+
+	public native void setFireResistance(float val) {
+		fireResist = val;
+	}
+
+	@read
+	public native float getFireResistance() {
+		return fireResist;
+	}
+
+
+	public native void setChokeResistance(float val) {
+		chokeResist = val;
+	}
+
+	@read
+	public native float getChokeResistance() {
+		return chokeResist;
+	}
+
+	public native void setDodgeChance(float val) {
+		dodgeChance = val;
+	}
+
+	@read 
+	public native float getDodgeChance() {
+		return dodgeChance;
+	}
+
+	public native void setBlockChance(float val) {
+		blockChance = val;
+	}
+
+	@read
+	public native float getBlockChance() {
+		return blockChance;
+	}
+
+	public native void setCounterAttackChance(float val) {
+		counterAttackChance = val;
+	}
+
+	@read
+	public float getCounterAttackChance() {
+		return counterAttackChance;
+	}
+
+	public native void setSaberBlockChance(float val) {
+		saberBlockChance = val;
+	}
+
+	@read
+	public float getSaberBlockChance() {
+		return saberBlockChance;
+	}
+
+	public native void setToughness(float val) {
+		toughness = val;
+	}
+
+	@read
+	public float getToughness() {
+		return toughness;
+	}
+
+	// public native void setMeleeDefenseChance(float val) {
+	// 	meleeDefenseChance = val;
+	// }
+
+	// @read
+	// public float getMeleeDefenseChance() {
+	// 	return meleeDefenseChance;
+	// }
+
+	// public native void setRangedDefenseChance(float val) {
+	// 	rangedDefenseChance = val;
+	// }
+
+	// @read
+	// public float getRangedDefenseChance() {
+	// 	return rangedDefenseChance;
+	// }
+	
+	public native void updateSecondaryDefenseModifiers();
+
+	public native void updateStats();
+
+	public native void updateDotResistances();
 
 	@read
 	public boolean isCloning() {

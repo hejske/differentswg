@@ -3512,3 +3512,309 @@ void PlayerObjectImplementation::createHelperDroid() {
 	Reference<Task*> createDroid = new SpawnHelperDroidTask(player);
 	createDroid->schedule(5000);
 }
+
+void PlayerObjectImplementation::updateResists() {
+
+	//CreatureObject* player = dynamic_cast<CreatureObject*>(parent.get().get());
+
+		// Reference<CreatureObject*> player = parent->asCreatureObject();
+
+		// if (player != nullptr) 
+		// 	auto ghost = player->getPlayerObject();
+
+	auto player = asPlayerObject();
+
+	if (player == nullptr)
+	return;
+
+	auto playerCreo = player->asCreatureObject();
+
+	float kin = 0;
+	float blast = 0;
+	float acid = 0;
+	float cold = 0;
+	float stun = 0;
+	float lightsaber = 0;
+	float heat = 0;
+	float elec = 0;
+	float energy = 0;
+
+	Vector<float> resists = {kin, blast, acid, cold, stun, lightsaber, heat, elec, energy};
+
+	Vector<String> resistNames = {"kinetic", "blast", "acid", "cold", "stun", "lightsaber", "heat", "electricity", "energy"};
+
+	Vector<String> slots = {"bicep_l", "bicep_r", "bracer_upper_l", "bracer_upper_r", "gloves", "hat", "chest2", "pants1", "shoes", "utility_belt"}; 
+
+	for (int i = 0; i < slots.size(); ++i) {
+		ManagedReference<ArmorObject*> armorObj = player->getSlottedObject(slots.get(i-1)).castTo<ArmorObject*>();
+		if (armorObj != nullptr) {
+			kin += armorObj->getKinetic();
+			blast += armorObj->getBlast();
+			acid += armorObj->getAcid();
+			cold += armorObj->getCold();
+			stun += armorObj->getStun();
+			lightsaber += armorObj->getLightSaber();
+			heat += armorObj->getHeat();
+			elec += armorObj->getElectricity();
+			energy += armorObj->getEnergy();
+		}
+	}
+
+	String resi = "_resistance";
+	String moreResi = "more_";
+	int moreTotalMod = playerCreo->getSkillMod("more_resistance");
+	int allResi = playerCreo->getSkillMod("all_resistance");
+
+	for (int i = 0; i < resistNames.size(); ++i) {
+		
+		String resiName = resistNames.get(i-1) + resi;
+		int mod = playerCreo->getSkillMod(resiName) + allResi;
+		moreTotalMod += playerCreo->getSkillMod(moreResi + resiName);
+		float modValue = resists.get(i-1);
+
+		if (mod > 0)
+			modValue += mod;
+
+		if (modValue > 0) {
+		
+			if (moreTotalMod > 0)
+				modValue *= (1 + moreTotalMod / 100.f);
+
+			int cap = 90;
+			float factor = 0.95;
+
+			modValue = ((modValue * cap) / (modValue + cap * factor));
+
+			resists.get(i-1) = modValue / 100.f;
+		}
+
+	}
+	
+	player->setKineticResistance(kin);
+	player->setBlastResistance(blast);
+	player->setAcidResistance(acid);
+	player->setColdResistance(cold);
+	player->setLightsaberResistance(lightsaber);
+	player->setHeatResistance(heat);
+	player->setElectricityResistance(elec);
+	player->setEnergyResistance(energy);
+	player->setStunResistance(stun);		
+}
+
+void PlayerObjectImplementation::updateSecondaryDefenseModifiers() {
+
+	//CreatureObject* player = dynamic_cast<CreatureObject*>(parent.get().get());
+
+	auto player = asPlayerObject();
+
+	if (player == nullptr)
+	return;
+	auto playerCreo = asCreatureObject();
+
+	ManagedReference<WeaponObject*> weapon = player->asCreatureObject()->getWeapon();
+	
+	int cap = 0;
+	float factor = 0;
+
+	//saber block
+	if (weapon != nullptr) {
+		if (weapon->isJediWeapon()) {
+			float wepSaberBlock = weapon->getSaberBlockChance() + playerCreo->getSkillMod("base_saber_block_chance");
+			if (wepSaberBlock > 0) {
+				int moreSaberBlock = playerCreo->getSkillMod("more_saber_block_chance");
+				if (moreSaberBlock > 0) {
+					wepSaberBlock *= 1 + (moreSaberBlock / 100.f);
+				}
+				float saberBlockRating = playerCreo->getSkillMod("increased_saber_block_chance");
+				if (saberBlockRating > 0) {
+					cap = 90;
+					factor = 0.95;
+					float saberBlockChance = wepSaberBlock * (1 + saberBlockRating / 100.f);
+					saberBlockChance = ((saberBlockChance * cap) / (saberBlockChance + cap * factor));
+				}
+				else {
+					player->setSaberBlockChance(wepSaberBlock);
+				}
+			}
+			else {
+				player->setSaberBlockChance(0);
+			}
+
+		}
+		else {
+			player->setSaberBlockChance(0);
+		}
+	}
+
+	//dodge
+	int baseDodge = 3;
+	float dodgeChance = baseDodge + playerCreo->getSkillMod("base_dodge_chance");
+	float dodgeRating = playerCreo->getSkillMod("increased_dodge_chance");
+	int moreDodgeChance = playerCreo->getSkillMod("more_dodge_chance");
+	if (moreDodgeChance > 0) {
+		dodgeChance *= 1 + (moreDodgeChance / 100.f);
+	}
+	dodgeChance *= 1 + (dodgeRating / 100.f);
+	cap = 90;
+	factor = 0.95;
+	dodgeChance = ((dodgeChance * cap) / (dodgeChance + cap * factor));
+	player->setDodgeChance(dodgeChance);
+
+	//block
+	int baseBlock = weapon->getBlockChance();
+	float blockChance = baseBlock + playerCreo->getSkillMod("base_block_chance");
+	float blockRating = playerCreo->getSkillMod("increased_block_chance");
+	int moreBlockChance = playerCreo->getSkillMod("more_block_chance");
+	if (moreBlockChance > 0) {
+		blockChance *= 1 + (moreBlockChance / 100.f);
+	}
+	blockChance *= 1 + (blockRating / 100.f);
+	cap = 100;
+	factor = 0.95;
+	blockChance = ((blockChance * cap) / (blockChance + cap * factor));
+	player->setBlockChance(blockChance);
+
+	//counter attack
+	int baseCounterAttack = 0;
+	float counterAttackChance = baseCounterAttack + playerCreo->getSkillMod("base_counter_attack_chance");
+	float counterAttackRating = playerCreo->getSkillMod("increased_counter_attack_chance");
+	int moreCounterAttackChance = playerCreo->getSkillMod("more_counter_attack_chance");
+	if (moreCounterAttackChance > 0) {
+		counterAttackChance *= 1 + (moreCounterAttackChance / 100.f);
+	}
+	counterAttackChance *= 1 + (counterAttackRating / 100.f);
+
+	if (counterAttackChance > 100)
+		counterAttackChance = 100;
+	// cap = 90;
+	// factor = 0.95;
+	// counterAttackChance = ((counterAttackChance * cap) / (counterAttackChance + cap * factor));
+	player->setCounterAttackChance(counterAttackChance);
+
+
+	//toughness
+	const auto defenseToughMods = weapon->getDefenderToughnessModifiers();
+	//general toughness
+	int toughness = playerCreo->getSkillMod("toughness");
+
+	//specific weapon toughness (default only melee weps)
+	for (int i = 0; i < defenseToughMods->size(); ++i) {
+		int toughMod = playerCreo->getSkillMod(defenseToughMods->get(i));
+		if (toughMod > 0)
+			toughness += toughMod;
+	}
+
+	int jediToughness = playerCreo->getSkillMod("jedi_toughness");
+	if (jediToughness > 0 && !playerCreo->isWearingArmor())
+		toughness += jediToughness;
+
+    cap = 90;
+	factor = 5;
+	toughness = (1 - ((toughness * cap) / (toughness + cap * factor)) / 100.f);
+
+	player->setToughness(toughness);
+
+
+}
+
+void PlayerObjectImplementation::updateDotResistances() {
+
+	auto player = asPlayerObject();
+
+	if (player == nullptr)
+	return;
+
+	auto playerCreo = player->asCreatureObject();
+
+	float poison = 0;
+	float fire = 0;
+	float disease = 0;
+	float bleed = 0;
+	float choke = 0;
+
+	Vector<float> resists = {poison, fire, disease, bleed, choke};
+
+	Vector<String> resistNames = {"poison", "fire", "disease", "bleed", "choke"};
+
+	String resi = "resistance_";
+	String moreResi = "more_";
+	int moreTotalMod = playerCreo->getSkillMod("more_dot_resistance");
+	int allResi = playerCreo->getSkillMod("all_dot_resistance");
+
+	for (int i = 0; i < resistNames.size(); ++i) {
+		
+		String resiName = resi + resistNames.get(i-1);
+		int mod = playerCreo->getSkillMod(resiName) + allResi;
+		moreTotalMod += playerCreo->getSkillMod(moreResi + resiName);
+		float modValue = resists.get(i-1);
+
+		if (mod > 0)
+			modValue += mod;
+
+		if (modValue > 0) {
+		
+			if (moreTotalMod > 0)
+				modValue *= (1 + moreTotalMod / 100.f);
+
+			int cap = 90;
+			float factor = 0.95;
+			modValue /= 5;
+			modValue = ((modValue * cap) / (modValue + cap * factor));
+
+			resists.get(i-1) = modValue / 100.f;
+		}
+	}
+
+	player->setBleedResistance(bleed);
+	player->setPoisonResistance(poison);
+	player->setDiseaseResistance(disease);
+	player->setFireResistance(fire);
+	player->setChokeResistance(choke);
+
+}
+
+// void PlayerObjectImplementation::updatePrimaryDefenses() {
+// 	auto player = asPlayerObject();
+
+// 	if (player == nullptr)
+// 	return;
+
+// 	auto playerCreo = player->asCreatureObject();
+	
+// 	int defense = playerCreo->getSkillMod("defense");
+// 	int meleeDef = playerCreo->getSkillMod("melee_defense") + defense;
+// 	int rangedDef = playerCreo->getSkillMod("ranged_defense") + defense;
+// 	int moreDefense = playerCreo->getSkillMod("more_defense");
+// 	int moreMeleeDefense = playerCreo->getSkillMod("more_melee_defense") + moreDefense;
+// 	int moreRangedDefense = playerCreo->getSkillMod("more_ranged_defense") + moreDefense;
+
+// 	int cap = 90;
+// 	int factor = 5;
+
+// 	if (meleeDef > 0) {
+// 		if (moreMeleeDefense > 0)
+// 		meleeDef *= (1 + moreMeleeDefense / 100.f);
+
+
+// 		meleeDef = (1 - ((meleeDef * cap) / (meleeDef + cap * factor)) / 100.f);
+
+// 		player->setMeleeDefenseChance(meleeDef);
+// 	}
+
+
+// 	if (rangedDef > 0) {
+// 		if (moreRangedDefense > 0)
+// 		rangedDef *= (1 + moreRangedDefense / 100.f);
+
+// 		rangedDef = (1 - ((rangedDef * cap) / (rangedDef + cap * factor)) / 100.f);
+
+// 		player->setRangedDefenseChance(rangedDef);
+// 	}
+// }
+
+void PlayerObjectImplementation::updateStats() {
+	updateSecondaryDefenseModifiers();
+	updateResists();
+	updateDotResistances();
+	//updatePrimaryDefenses();
+}
