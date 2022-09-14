@@ -133,6 +133,30 @@ int ContainerComponent::canAddObject(SceneObject* sceneObject, SceneObject* obje
 		if (object->getArrangementDescriptorSize() > arrangementGroup) {
 			const Vector<String>* descriptors = object->getArrangementDescriptor(arrangementGroup);
 
+			//would segfault if it'd equip both slots while holding oh and oh not having been unequipped yet, prolly discount fix.. hopefully O.O
+			bool holdr = false;
+			bool holdl = false;
+			for (int i = 0; i < descriptors->size(); ++i){
+				const String& childArrangement = descriptors->get(i);
+
+				if (childArrangement.contains("hold_r")) {
+					holdr = true;
+				}
+				else if  (childArrangement.contains("hold_l")) {
+					holdl = true;
+				}
+
+				if (holdl && holdr) {
+					ManagedReference<CreatureObject*> creo = sceneObject->asCreatureObject();
+					if (creo != nullptr) {
+						if (creo->getOffHandWeapon() != nullptr) {
+							errorDescription = "Unequip your offhand to equip a weapon that uses both weapon slots";
+							return TransferErrorCode::CANTADD;
+						}
+					}
+				}
+			}
+
 			for (int i = 0; i < descriptors->size(); ++i){
 				const String& childArrangement = descriptors->get(i);
 
