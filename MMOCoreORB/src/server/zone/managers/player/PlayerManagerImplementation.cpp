@@ -1332,7 +1332,7 @@ void PlayerManagerImplementation::killPlayer(TangibleObject* attacker, CreatureO
 	player->sendSystemMessage(stringId);
 
 	player->updateTimeOfDeath();
-	player->clearBuffs(true, false);
+	//player->clearBuffs(true, false);
 
 	PlayerObject* ghost = player->getPlayerObject();
 
@@ -1719,12 +1719,12 @@ void PlayerManagerImplementation::sendPlayerToCloner(CreatureObject* player, uin
 	uint64 preDesignatedFacilityOid = ghost->getCloningFacility();
 	ManagedReference<SceneObject*> preDesignatedFacility = server->getObject(preDesignatedFacilityOid);
 
-	if (preDesignatedFacility == nullptr || preDesignatedFacility != cloner) {
-		player->addWounds(CreatureAttribute::HEALTH, 100, true, false);
-		player->addWounds(CreatureAttribute::ACTION, 100, true, false);
-		player->addWounds(CreatureAttribute::MIND, 100, true, false);
-		player->addShockWounds(100, true);
-	}
+	// if (preDesignatedFacility == nullptr || preDesignatedFacility != cloner) {
+	// 	player->addWounds(CreatureAttribute::HEALTH, 100, true, false);
+	// 	player->addWounds(CreatureAttribute::ACTION, 100, true, false);
+	// 	player->addWounds(CreatureAttribute::MIND, 100, true, false);
+	// 	player->addShockWounds(100, true);
+	// }
 
 	if (ConfigManager::instance()->useCovertOvertSystem()) {
 		if ((player->getFactionStatus() == FactionStatus::OVERT) && !player->hasSkill("force_rank_light_novice") && !player->hasSkill("force_rank_dark_novice") && (cbot->getFacilityType() != CloningBuildingObjectTemplate::FACTION_IMPERIAL) && (cbot->getFacilityType() != CloningBuildingObjectTemplate::FACTION_REBEL))
@@ -4538,6 +4538,9 @@ void PlayerManagerImplementation::fixHAM(CreatureObject* player) {
 		}
 
 		int encumbranceType = -1;
+	
+		int hamMod = 0;
+		int increaseHamMod = 0;
 
 		for (int i = 0; i < 9; ++i) {
 			int maxModifier = attributeValues.get((byte)i);
@@ -4557,6 +4560,25 @@ void PlayerManagerImplementation::fixHAM(CreatureObject* player) {
 			if (calculated != max && calculated > 1) {
 				if (player->getHAM(i) > calculated)
 					player->setHAM(i, calculated, false);
+
+				if (i == 0) {
+					hamMod = player->getSkillMod("health_mod");
+					increaseHamMod = player->getSkillMod("increased_health");
+					if (hamMod > 0)
+						calculated += hamMod;
+					
+					if (increaseHamMod > 0)
+						calculated *= (1 + increaseHamMod / 100.f);
+				}
+				else if (i == 6) {
+					hamMod = player->getSkillMod("mind_mod");
+					increaseHamMod = player->getSkillMod("increased_mind");
+					if (hamMod > 0)
+						calculated += hamMod;
+					
+					if (increaseHamMod > 0)
+						calculated *= (1 + increaseHamMod / 100.f);
+				}
 
 				player->setMaxHAM(i, calculated, false);
 			}
