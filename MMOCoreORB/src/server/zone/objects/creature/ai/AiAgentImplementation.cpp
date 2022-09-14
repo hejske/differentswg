@@ -190,18 +190,30 @@ void AiAgentImplementation::loadTemplateData(CreatureTemplate* templateData) {
 				baseHAM.add(ham/10);
 		}
 	} else {
+		int incPetHam = 0;
+		if (isPet()) {
+			ManagedReference<CreatureObject*> petMaster = getLinkedCreature().get();
+			if (petMaster != nullptr) {
+				incPetHam = petMaster->getSkillMod("increased_pet_ham");
+			}	
+		}
+
 		int health = petDeed->getHealth();
+		health *= (1 + incPetHam / 100.f);
 		baseHAM.add(health);
 		baseHAM.add(health/10);
 		baseHAM.add(health/10);
 		int action = petDeed->getAction();
+		action *= (1 + incPetHam / 100.f);
 		baseHAM.add(action);
 		baseHAM.add(action/10);
 		baseHAM.add(action/10);
 		int mind = petDeed->getMind();
+		mind *= (1 + incPetHam / 100.f);
 		baseHAM.add(mind);
 		baseHAM.add(mind/10);
 		baseHAM.add(mind/10);
+
 	}
 
 	hamList.removeAll();
@@ -734,6 +746,10 @@ void AiAgentImplementation::setLevel(int lvl, bool randomHam) {
 	int baseHam = ((float)getHamBase()) * ratio;
 
 	int ham = 0;
+
+	int calculated = 0;
+	int hamMod = 0;
+	int incHamMod = 0;
 
 	for (int i = 0; i < 9; ++i) {
 		if (i % 3 == 0) {

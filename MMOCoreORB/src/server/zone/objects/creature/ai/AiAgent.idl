@@ -48,6 +48,9 @@ include server.zone.objects.area.ActiveArea;
 @mock
 @json
 class AiAgent extends CreatureObject {
+
+	public transient boolean lootCollector;
+
 	protected transient AiThinkEvent thinkEvent;
 
 	protected transient AiMoveEvent moveEvent;
@@ -257,6 +260,8 @@ class AiAgent extends CreatureObject {
 
 		coordinateMin = -8192;
 		coordinateMax = 8192;
+
+		lootCollector = false;
 	}
 
 	/**
@@ -1655,4 +1660,15 @@ class AiAgent extends CreatureObject {
 	public void setHamRegenDisabled(boolean val) {
 		hamRegenDisabled = val;
 	}
+
+	@preLocked
+	public void setLootCollector(boolean status) {
+		lootCollector = status;
+	}
+
+	@read
+	public boolean isLootCollector() {
+		return lootCollector;
+	}
+
 }
