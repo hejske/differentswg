@@ -50,6 +50,7 @@ CreatureAttackData::CreatureAttackData(const CreatureAttackData& data) {
 	frsLightMaxDamageModifier = data.frsLightMaxDamageModifier;
 	frsDarkMinDamageModifier = data.frsDarkMinDamageModifier;
 	frsDarkMaxDamageModifier = data.frsDarkMaxDamageModifier;
+	forcePowersDamageScaling = data.forcePowersDamageScaling;
 
 	healthCostMultiplier = data.healthCostMultiplier;
 	actionCostMultiplier = data.actionCostMultiplier;
@@ -73,6 +74,8 @@ CreatureAttackData::CreatureAttackData(const CreatureAttackData& data) {
 	combatSpam = data.combatSpam;
 
 	stateAccuracyBonus = data.stateAccuracyBonus;
+
+	dualWieldAttack = data.dualWieldAttack;
 }
 
 void CreatureAttackData::fillFromBase() {
@@ -101,6 +104,8 @@ void CreatureAttackData::fillFromBase() {
 	frsLightMaxDamageModifier = baseCommand->getFrsLightMaxDamageModifier();
 	frsDarkMinDamageModifier = baseCommand->getFrsDarkMinDamageModifier();
 	frsDarkMaxDamageModifier = baseCommand->getFrsDarkMaxDamageModifier();
+	forcePowersDamageScaling = baseCommand->getForcePowersDamageScaling();
+	dualWieldAttack = baseCommand->isDualWieldAttack();
 
 	stateAccuracyBonus = 0;
 
@@ -179,6 +184,9 @@ void CreatureAttackData::setVariable(const String& var, const String& val) {
 		break;
 	case 0xBD39E628: // STRING_HASHCODE("hitIncapTarget")
 		hitIncapTarget = (bool)Integer::valueOf(val);
+		break;
+	case STRING_HASHCODE("dualWieldAttack"):
+		dualWieldAttack = (bool)Integer::valueOf(val);
 		break;
 	default:
 		break;

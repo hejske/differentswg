@@ -36,6 +36,7 @@ protected:
 	float frsLightMaxDamageModifier;
 	float frsDarkMinDamageModifier;
 	float frsDarkMaxDamageModifier;
+	float forcePowersDamageScaling;
 
 	int range;
 	int coneRange;
@@ -56,6 +57,8 @@ protected:
 	String combatSpam;
 
 	int stateAccuracyBonus;
+
+	bool dualWieldAttack;
 
 public:
 	CreatureAttackData(const UnicodeString & dataString, const CombatQueueCommand *base, uint64 target);
@@ -234,6 +237,22 @@ public:
 
 	bool changesDefenderPosture() const;
 	bool changesAttackerPosture() const;
+
+	void setForcePowersDamageScaling(float val) {
+		forcePowersDamageScaling = val;
+	}
+
+	float getForcePowersDamageScaling() const {
+		return forcePowersDamageScaling;
+	}
+
+	void setDualWieldAttack(bool val) {
+		dualWieldAttack = val;
+	}
+
+	bool isDualWieldAttack() const {
+		return dualWieldAttack;
+	}
 };
 
 #endif /* CREATUREATTACKDATA_H_ */
