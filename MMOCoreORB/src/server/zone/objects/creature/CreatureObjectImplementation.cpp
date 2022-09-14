@@ -1531,7 +1531,7 @@ void CreatureObjectImplementation::addSkillMod(const int modType, const String& 
 	}
 }
 
-void CreatureObjectImplementation::checkForSpecialMods(String modName, int value, int oldValue) {	
+void CreatureObjectImplementation::checkForSpecialMods(String& modName, int value, int oldValue) {	
 	
 	if (modName == "health_mod") {
 		addMaxHAM(0, value * (1 + getSkillMod("increased_health") / 100.f));
@@ -4401,16 +4401,6 @@ int CreatureObjectImplementation::healDamageAll(TangibleObject* healer,
 	}
 
 	return returnValue;
-}
-
-void CreatureObjectImplementation::checkForSpecialMods(String& modName, int value) {	
-	String mod = modName;
-	if (mod == "private_run_speed_mod") {
-		updateRunSpeedMod(value);
-	}
-	else if (mod == "private_base_move_speed_mod") {
-		updateBaseMoveSpeedMultiMod(value);
-	}
 }
 
 bool CreatureObjectImplementation::isWearingArmor() {
