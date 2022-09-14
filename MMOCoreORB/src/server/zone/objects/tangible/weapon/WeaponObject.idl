@@ -16,6 +16,7 @@ import server.zone.objects.tangible.powerup.PowerupObject;
 import system.util.Vector;
 import system.util.VectorMap;
 import system.lang.String;
+include engine.util.u3d.Vector3;
 
 @json
 @mock
@@ -27,6 +28,8 @@ class WeaponObject extends TangibleObject {
 	protected boolean certified;
 
 	protected int armorPiercing;
+
+	protected float armorPenetration;
 
 	protected int pointBlankAccuracy;
 	protected int pointBlankRange;
@@ -44,6 +47,18 @@ class WeaponObject extends TangibleObject {
 	protected float minDamage;
 	protected float maxDamage;
 
+//vector<vector3> ?
+	@dereferenced	
+	protected Vector<int> bonusMaxDamage;
+
+	@dereferenced	
+	protected Vector<int> bonusMinDamage;
+
+	@dereferenced	
+	protected Vector<int> bonusDamageType;
+
+	protected float critChance;
+
 	protected float damageRadius;
 
 	protected float woundsRatio;
@@ -56,6 +71,10 @@ class WeaponObject extends TangibleObject {
 	protected int forceCost;
 
 	protected float saberForceCost;
+
+	protected float saberBlockChance;
+
+	protected float blockChance;
 
 	protected int bladeColor;
 
@@ -82,7 +101,18 @@ class WeaponObject extends TangibleObject {
 	@dereferenced
 	protected VectorMap<string, int> wearableSkillMods;
 
-	public WeaponObject() {
+	protected int itemLevel;
+
+	public WeaponObject() {	
+
+		blockChance = 0;
+
+		critChance = 0;
+
+		armorPenetration = 0;
+
+		saberBlockChance = 0;
+
 		certified = false;
 		armorPiercing = 0;
 
@@ -595,5 +625,90 @@ class WeaponObject extends TangibleObject {
 	@read
 	public final VectorMap<string, int> getWearableSkillMods() {
 		return wearableSkillMods;
+	}
+
+	@read
+	public native int getBonusDamageSize() {
+		return bonusMaxDamage.size();
+	}
+
+	@read
+	public native int getBonusMaxDamage(int index) {
+		return bonusMaxDamage.elementAt(index);
+	}
+
+	@read
+	public native int getBonusMinDamage(int index) {
+		return bonusMinDamage.elementAt(index);
+	}
+
+	@read
+	public native int getBonusDamageType(int index) {
+		return bonusDamageType.elementAt(index);
+	}
+
+	@preLocked
+	public native void addBonusMaxDamage(int t) {
+		bonusMaxDamage.add(t);
+	}
+
+	@preLocked
+	public native void addBonusMinDamage(int t) {
+		bonusMinDamage.add(t);
+	}
+
+	@preLocked
+	public void addBonusDamageType(int t) {
+		bonusDamageType.add(t);
+	}
+
+	@read
+	public native float getCritChance() {
+		return critChance;
+	}
+
+	@preLocked
+	public void setCritChance(float val) {
+		critChance = val;
+	}
+
+	@read
+	public native float getArmorPenetration() {
+		return armorPenetration;
+	}
+
+	@preLocked
+	public void setArmorPenetration(float val) {
+		armorPenetration = val;
+	}
+
+	@preLocked
+	public void setSaberBlockChance(float val) {
+		saberBlockChance = val;
+	}
+
+	@read
+	public native float getSaberBlockChance() {
+		return saberBlockChance;
+	}
+
+	@preLocked
+	public void setBlockChance(float val) {
+		blockChance = val;
+	}
+
+	@read
+	public native float getBlockChance() {
+		return blockChance;
+	}
+
+	@preLocked
+	public void setItemLevel(int val) {
+		itemLevel = val;
+	}
+
+	@read
+	public native int getItemLevel() {
+		return itemLevel;
 	}
 }

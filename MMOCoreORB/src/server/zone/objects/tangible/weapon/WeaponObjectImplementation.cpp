@@ -257,7 +257,13 @@ void WeaponObjectImplementation::fillAttributeList(AttributeListMessage* alm, Cr
 		break;
 	}
 
-	alm->insertAttribute("wpn_armor_pierce_rating", ap);
+	//alm->insertAttribute("wpn_armor_pierce_rating", ap);
+
+	alm->insertAttribute("wpn_armor_penetration", getArmorPenetration());
+
+	alm->insertAttribute("wpn_crit_chance", getCritChance());
+
+
 
 	alm->insertAttribute("wpn_attack_speed", Math::getPrecision(getAttackSpeed(), 1));
 
@@ -315,7 +321,7 @@ void WeaponObjectImplementation::fillAttributeList(AttributeListMessage* alm, Cr
 
 	woundsratio << wnd << "%";
 
-	alm->insertAttribute("damage.wpn_wound_chance", woundsratio);
+	//alm->insertAttribute("damage.wpn_wound_chance", woundsratio);
 
 	//Accuracy Modifiers
 	StringBuffer pblank;
@@ -340,11 +346,11 @@ void WeaponObjectImplementation::fillAttributeList(AttributeListMessage* alm, Cr
 	alm->insertAttribute("cat_wpn_rangemods.wpn_range_max", maxrange);
 
 	//Special Attack Costs
-	alm->insertAttribute("cat_wpn_attack_cost.health", getHealthAttackCost());
+	//alm->insertAttribute("cat_wpn_attack_cost.health", getHealthAttackCost());
 
-	alm->insertAttribute("cat_wpn_attack_cost.action", getActionAttackCost());
+	//alm->insertAttribute("cat_wpn_attack_cost.action", getActionAttackCost());
 
-	alm->insertAttribute("cat_wpn_attack_cost.mind", getMindAttackCost());
+	//alm->insertAttribute("cat_wpn_attack_cost.mind", getMindAttackCost());
 
 	//Anti Decay Kit
 	if(hasAntiDecayKit()){
@@ -353,93 +359,137 @@ void WeaponObjectImplementation::fillAttributeList(AttributeListMessage* alm, Cr
 
 	// Force Cost
 	if (getForceCost() > 0)
-		alm->insertAttribute("forcecost", (int)getForceCost());
+		//alm->insertAttribute("forcecost", (int)getForceCost());
 
 	for (int i = 0; i < getNumberOfDots(); i++) {
 
-			String dt;
+		String dt;
 
-			switch (getDotType(i)) {
-			case 1:
-				dt = "Poison";
-				break;
-			case 2:
-				dt = "Disease";
-				break;
-			case 3:
-				dt = "Fire";
-				break;
-			case 4:
-				dt = "Bleeding";
-				break;
-			default:
-				dt = "Unknown";
-				break;
-			}
-
-			StringBuffer type;
-			type << "cat_wpn_dot_0" << i << ".wpn_dot_type";
-			alm->insertAttribute(type.toString(), dt);
-
-			String da;
-
-			switch (getDotAttribute(i)) {
-			case 0:
-				da = "Health";
-				break;
-			case 1:
-				da = "Strength";
-				break;
-			case 2:
-				da = "Constitution";
-				break;
-			case 3:
-				da = "Action";
-				break;
-			case 4:
-				da = "Quickness";
-				break;
-			case 5:
-				da = "Stamina";
-				break;
-			case 6:
-				da = "Mind";
-				break;
-			case 7:
-				da = "Focus";
-				break;
-			case 8:
-				da = "Willpower";
-				break;
-			default:
-				da = "Unknown";
-				break;
-			}
-
-			StringBuffer attrib;
-			attrib << "cat_wpn_dot_0" << i << ".wpn_dot_attrib";
-			alm->insertAttribute(attrib.toString(), da);
-
-			StringBuffer str;
-			str << "cat_wpn_dot_0" << i << ".wpn_dot_strength";
-			alm->insertAttribute(str.toString(), getDotStrength(i));
-
-			StringBuffer dotDur;
-			dotDur << getDotDuration(i) << "s";
-			StringBuffer dur;
-			dur << "cat_wpn_dot_0" << i << ".wpn_dot_duration";
-			alm->insertAttribute(dur.toString(), dotDur);
-
-			StringBuffer dotPot;
-			dotPot << getDotPotency(i) << "%";
-			StringBuffer pot;
-			pot << "cat_wpn_dot_0" << i << ".wpn_dot_potency";
-			alm->insertAttribute(pot.toString(), dotPot);
-
-			StringBuffer use;
-			use << "cat_wpn_dot_0" << i << ".wpn_dot_uses";
-			alm->insertAttribute(use.toString(), getDotUses(i));
+		switch (getDotType(i)) {
+		case 1:
+			dt = "Poison";
+			break;
+		case 2:
+			dt = "Disease";
+			break;
+		case 3:
+			dt = "Fire";
+			break;
+		case 4:
+			dt = "Bleeding";
+			break;
+		default:
+			dt = "Unknown";
+			break;
 		}
+
+		StringBuffer type;
+		type << "cat_wpn_dot_0" << i << ".wpn_dot_type";
+		alm->insertAttribute(type.toString(), dt);
+
+		String da;
+
+		switch (getDotAttribute(i)) {
+		case 0:
+			da = "Health";
+			break;
+		case 1:
+			da = "Strength";
+			break;
+		case 2:
+			da = "Constitution";
+			break;
+		case 3:
+			da = "Action";
+			break;
+		case 4:
+			da = "Quickness";
+			break;
+		case 5:
+			da = "Stamina";
+			break;
+		case 6:
+			da = "Mind";
+			break;
+		case 7:
+			da = "Focus";
+			break;
+		case 8:
+			da = "Willpower";
+			break;
+		default:
+			da = "Unknown";
+			break;
+		}
+
+		StringBuffer attrib;
+		attrib << "cat_wpn_dot_0" << i << ".wpn_dot_attrib";
+		alm->insertAttribute(attrib.toString(), da);
+
+		StringBuffer str;
+		str << "cat_wpn_dot_0" << i << ".wpn_dot_strength";
+		alm->insertAttribute(str.toString(), getDotStrength(i));
+
+		StringBuffer dotDur;
+		dotDur << getDotDuration(i) << "s";
+		StringBuffer dur;
+		dur << "cat_wpn_dot_0" << i << ".wpn_dot_duration";
+		alm->insertAttribute(dur.toString(), dotDur);
+
+		StringBuffer dotPot;
+		dotPot << getDotPotency(i) << "%";
+		StringBuffer pot;
+		pot << "cat_wpn_dot_0" << i << ".wpn_dot_potency";
+		alm->insertAttribute(pot.toString(), dotPot);
+
+		StringBuffer use;
+		use << "cat_wpn_dot_0" << i << ".wpn_dot_uses";
+		//alm->insertAttribute(use.toString(), getDotUses(i));
+	}
+
+	for (int i = 0; i < getBonusDamageSize(); i++) {
+
+		StringBuffer dmgtxt;
+
+		int minDmg = getBonusMinDamage(i);
+		int maxDmg = getBonusMaxDamage(i);
+
+		dmgtxt << minDmg << " - " << maxDmg;
+
+		switch (getBonusDamageType(i)) {
+			case SharedWeaponObjectTemplate::KINETIC:
+				dmgtxt << " Kinetic";
+				break;
+			case SharedWeaponObjectTemplate::ENERGY:
+				dmgtxt << " Energy";
+				break;
+			case SharedWeaponObjectTemplate::ELECTRICITY:
+				dmgtxt << " Electricity";
+				break;
+			case SharedWeaponObjectTemplate::STUN:
+				dmgtxt << " Stun";
+				break;
+			case SharedWeaponObjectTemplate::BLAST:
+				dmgtxt << " Blast";
+				break;
+			case SharedWeaponObjectTemplate::HEAT:
+				dmgtxt << " Heat";
+				break;
+			case SharedWeaponObjectTemplate::COLD:
+				dmgtxt << " Cold";
+				break;
+			case SharedWeaponObjectTemplate::ACID:
+				dmgtxt << " Acid";
+				break;
+			case SharedWeaponObjectTemplate::LIGHTSABER:
+				dmgtxt << " Lightsaber";
+				break;
+			default:
+				dmgtxt << "Unknown";
+				break;
+		}
+	}
+
 
 	if (hasPowerup())
 		powerupObject->fillWeaponAttributeList(alm, _this.getReferenceUnsafeStaticCast());
