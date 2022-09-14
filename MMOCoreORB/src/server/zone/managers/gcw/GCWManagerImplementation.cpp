@@ -130,6 +130,7 @@ void GCWManagerImplementation::loadLuaConfig() {
 	crackdownScansEnabled = lua->getGlobalBoolean("crackdownScansEnabled");
 	crackdownScanPrivilegedPlayers = lua->getGlobalBoolean("crackdownScanPrivilegedPlayers");
 	wildScanInterval = lua->getGlobalInt("wildScanInterval") * 1000;
+	wildScanLoginDelay = lua->getGlobalInt("wildScanLoginDelay") * 1000;
 	wildScanChance = lua->getGlobalInt("wildScanChance");
 	crackdownPlayerScanCooldown = lua->getGlobalInt("crackdownPlayerScanCooldown") * 1000;
 	crackdownContrabandFineCredits = lua->getGlobalInt("crackdownContrabandFineCredits");
@@ -336,6 +337,7 @@ void GCWManagerImplementation::performGCWTasks() {
 	uint64 thisOid;
 	int rebelCheck = 0, rebelsScore = 0;
 	int imperialCheck = 0, imperialsScore = 0;
+	int totalPlayerBases = 0;
 
 	for (int i = 0; i < gcwBaseList.size(); i++) {
 		thisOid = getBase(i)->getObjectID();
@@ -345,9 +347,25 @@ void GCWManagerImplementation::performGCWTasks() {
 		if (building == nullptr)
 			continue;
 
-		if (!allowPveBases && !(building->getPvpStatusBitmask() & CreatureFlag::OVERT) && building->getFactionBaseType() == PLAYERFACTIONBASE) {
-			scheduleBaseDestruction(building, nullptr, true);
-			continue;
+		if (building->getFactionBaseType() == PLAYERFACTIONBASE) {
+			// If PvE Bases are disallowed, schedule for destruct and do not add to count
+			if (!allowPveBases && !(building->getPvpStatusBitmask() & CreatureFlag::OVERT)) {
+				building->info(true) << " GCW PvE Base scheduled for destruction -- Base ID: " << building->getObjectID();
+
+				scheduleBaseDestruction(building, nullptr, true);
+				continue;
+			}
+
+			// Update Base Count
+			totalPlayerBases++;
+
+			// Total bases on the planet are greater then the set amount in gcw_manager.lua schedule bases over the alowed amount for destruct
+			if (totalPlayerBases > maxBasesPerPlanet) {
+				building->info(true) << " GCW Base over Planet Capacity scheduled for destruction -- Base ID: " << building->getObjectID();
+
+				scheduleBaseDestruction(building, nullptr, true);
+				continue;
+			}
 		}
 
 		String templateString = building->getObjectTemplate()->getFullTemplateString();
@@ -489,6 +507,7 @@ int GCWManagerImplementation::getBaseCount(CreatureObject* creature, bool pvpOnl
 		return 0;
 
 	ZoneServer* server = zone->getZoneServer();
+
 	if (server == nullptr)
 		return 0;
 
@@ -3344,9 +3363,6 @@ void GCWManagerImplementation::performCheckWildContrabandScanTask() {
 		if (!player->checkCooldownRecovery("crackdown_scan"))
 			continue;
 
-		if (player->getPlayerObject()->getSessionMiliSecs() > 60 * 1000)
-			continue;
-
 		if (player->isDead() || player->isIncapacitated() || player->isFeigningDeath())
 			continue;
 
@@ -3355,8 +3371,17 @@ void GCWManagerImplementation::performCheckWildContrabandScanTask() {
 
 		auto ghost = player->getPlayerObject();
 
-		if (ghost == nullptr || (!crackdownScanPrivilegedPlayers && ghost->isPrivileged()))
-			continue;
+		if (ghost != nullptr) {
+			if (ghost->isLinkDead())
+				continue;
+
+			if (!crackdownScanPrivilegedPlayers && ghost->isPrivileged())
+				continue;
+
+			// No scan until player session time passes the login delay
+			if (ghost->getSessionMiliSecs() < getWildScanLoginDelay())
+				continue;
+		}
 
 		if (zone->getPlanetManager()->isSpawningPermittedAt(player->getWorldPositionX(), player->getWorldPositionY()) && getWildScanChance() >= System::random(100)) {
 			WildContrabandScanSession* wildContrabandScanSession = new WildContrabandScanSession(player, getWinningFactionDifficultyScaling());

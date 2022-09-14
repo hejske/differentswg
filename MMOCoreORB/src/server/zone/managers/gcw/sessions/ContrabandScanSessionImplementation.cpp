@@ -38,8 +38,10 @@ int ContrabandScanSessionImplementation::initializeSession() {
 		return false;
 	}
 
-	adjustReinforcementStrength(scanner);
-	calculateSmugglingSuccess(player);
+	Zone* zone = scanner->getZone();
+
+	if (zone == nullptr)
+		return false;
 
 	uint32 faction = scanner->getFaction();
 
@@ -55,7 +57,20 @@ int ContrabandScanSessionImplementation::initializeSession() {
 
 	player->info("Contraband scan started by scanner " + scanner->getDisplayedName() + " (" + String::valueOf(scanner->getObjectID()) + ") at " + scanner->getWorldPosition().toString());
 
+	GCWManager* gcwMan = zone->getGCWManager();
+
+	if (gcwMan != nullptr) {
+		// Update the cooldown on the player
+		player->updateCooldownTimer("crackdown_scan", gcwMan->getCrackdownPlayerScanCooldown());
+	}
+
+	// Update the scanners cooldown
 	scanner->updateCooldownTimer("crackdown_scan", CONTRABANDSCANCOOLDOWN);
+
+	adjustReinforcementStrength(scanner);
+	calculateSmugglingSuccess(player);
+
+	player->addActiveSession(SessionFacadeType::CONTRABANDSCAN, _this.getReferenceUnsafeStaticCast());
 
 	if (contrabandScanTask == nullptr) {
 		contrabandScanTask = new ContrabandScanTask(player);
@@ -64,8 +79,6 @@ int ContrabandScanSessionImplementation::initializeSession() {
 	if (!contrabandScanTask->isScheduled()) {
 		contrabandScanTask->schedule(TASKDELAY);
 	}
-
-	player->addActiveSession(SessionFacadeType::CONTRABANDSCAN, _this.getReferenceUnsafeStaticCast());
 
 	return true;
 }

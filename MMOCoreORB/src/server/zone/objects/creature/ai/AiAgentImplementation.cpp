@@ -1611,15 +1611,16 @@ void AiAgentImplementation::clearCombatState(bool clearDefenders) {
 void AiAgentImplementation::notifyInsert(QuadTreeEntry* entry) {
 	CreatureObjectImplementation::notifyInsert(entry);
 
-	SceneObject* scno = static_cast<SceneObject*>( entry);
-
-	if (scno == asAiAgent())
-		return;
+	SceneObject* scno = static_cast<SceneObject*>(entry);
 
 	if (scno == nullptr)
 		return;
 
+	if (scno == asAiAgent() || !scno->isCreatureObject())
+		return;
+
 	CreatureObject* creo = scno->asCreatureObject();
+
 	if (creo != nullptr && !creo->isInvisible() && creo->isPlayerCreature()) {
 		int newValue = (int) numberOfPlayersInRange.increment();
 		activateMovementEvent();
@@ -1851,6 +1852,16 @@ void AiAgentImplementation::notifyDissapear(QuadTreeEntry* entry) {
 }
 
 void AiAgentImplementation::activateRecovery() {
+	ZoneServer* zoneServer = getZoneServer();
+
+	if (zoneServer != nullptr && zoneServer->isServerShuttingDown()) {
+			if (thinkEvent != nullptr && thinkEvent->isScheduled())
+				thinkEvent->cancel();
+
+			thinkEvent = nullptr;
+			return;
+	}
+
 	if (thinkEvent == nullptr) {
 		thinkEvent = new AiThinkEvent(asAiAgent());
 
@@ -2407,28 +2418,26 @@ void AiAgentImplementation::doMovement() {
 		Reference<Behavior*> rootBehavior = getBehaviorTree(BehaviorTreeSlot::NONE);
 		assert(rootBehavior != nullptr);
 
-		// Do pre-checks (these should remain hard-coded)
-		if (asAiAgent()->isDead() || asAiAgent()->isIncapacitated() || (asAiAgent()->getZoneUnsafe() == nullptr) || !(getOptionsBitmask() & OptionBitmask::AIENABLED)) {
+		// Check for AIENABLED flag. Other Conditions are checked in Behavior::checkConditions
+		if (!(getOptionsBitmask() & OptionBitmask::AIENABLED)) {
 			cancelMovementEvent();
 			setFollowObject(nullptr);
 			return;
 		}
 
-		Time startTime;
-		startTime.updateToCurrentTime();
-
-		//if (isWaiting())
-		//	stopWaiting();
-
 #ifdef DEBUG_AI
 		if (peekBlackboard("aiDebug") && readBlackboard("aiDebug") == true)
 			info("Performing root behavior: " + rootBehavior->print(), true);
 #endif // DEBUG_AI
+
 		// activate AI
 		Behavior::Status actionStatus = rootBehavior->doAction(asAiAgent());
 
 		if (actionStatus == Behavior::RUNNING)
 			popRunningChain(); // don't keep root in the running chain
+
+		Time startTime;
+		startTime.updateToCurrentTime();
 
 		//if (actionStatus == Behavior::RUNNING) {
 		//	std::cout << "Running chain: (" << runningChain.size() << ")" << std::endl;
@@ -3102,7 +3111,9 @@ void AiAgentImplementation::activateMovementEvent(bool reschedule) {
 	bool alwaysActive = false;
 #endif // DEBUG_AI
 
-	if (!alwaysActive && numberOfPlayersInRange.get() <= 0 && getFollowObject().get() == nullptr && !isRetreating()) {
+	ZoneServer* zoneServer = getZoneServer();
+
+	if ((!alwaysActive && numberOfPlayersInRange.get() <= 0 && getFollowObject().get() == nullptr && !isRetreating()) || zoneServer == nullptr || zoneServer->isServerShuttingDown()) {
 		cancelMovementEvent();
 		return;
 	}
