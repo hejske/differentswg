@@ -282,6 +282,8 @@ void BuffImplementation::applyAttributeModifiers() {
 	if (size <= 0)
 		return;
 
+	int incHamMod = 0;
+
 	for (int i = 0; i < size; ++i) {
 		VectorMapEntry<uint8, int>* entry = &attributeModifiers.elementAt(i);
 
@@ -292,6 +294,19 @@ void BuffImplementation::applyAttributeModifiers() {
 			continue;
 
 		try {
+			//if (value > 0) {
+				if (attribute == CreatureAttribute::HEALTH) {
+					incHamMod = creo->getSkillMod("increased_health");
+					if (incHamMod > 0)
+						value *= (1 + incHamMod / 100.f);
+				}
+				else if (attribute == CreatureAttribute::MIND) {
+					incHamMod = creo->getSkillMod("increased_mind");
+					if (incHamMod > 0)
+						value *= (1 + incHamMod / 100.f);
+				}
+			//}
+
 			int currentMaxHAM = creo->getMaxHAM(attribute);
 
 			int newMaxHAM = currentMaxHAM + value;
