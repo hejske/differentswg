@@ -26,23 +26,29 @@ public:
 	}
 
 	void run() {
-		Locker locker(creature);
 
-		Zone* zone = creature->getZone();
+		if (creature != nullptr) {
+			Locker locker(creature);
 
-		creature->removePendingTask("despawn");
+			Zone* zone = creature->getZone();
 
-		if (zone == nullptr)
-			return;
 
-		creature->destroyObjectFromWorld(false);
-		creature->notifyDespawn(zone);
+			//hopefully this ugly derp will fix despawning o.o
+			if (creature->getPendingTask("despawnSecurity") != nullptr)
+				creature->removePendingTask("despawnSecurity");
+			
+			if (creature->getPendingTask("ninjaDespawn") != nullptr)
+				creature->removePendingTask("ninjaDespawn");
 
-		//creature->printReferenceHolders();
+			if (creature->getPendingTask("despawn") != nullptr)
+				creature->removePendingTask("despawn");
 
-		/*PatrolPoint* homeLocation = creature->getHomeLocation();
+			if (zone == nullptr)
+				return;
 
-		if (homeLocation->getPosit)*/
+			creature->destroyObjectFromWorld(false);
+			creature->notifyDespawn(zone);
+		}
 	}
 };
 

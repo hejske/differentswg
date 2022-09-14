@@ -18,15 +18,20 @@ class GroupLootTask : public Task {
 	ManagedReference<GroupObject*> group;
 	ManagedReference<CreatureObject*> player;
 	ManagedReference<AiAgent*> corpse;
-
+	ManagedReference<SceneObject*> firstLootContainer;
+	float lootRange;
+	bool aoe;
 	bool lootAll;
 
 public:
-	GroupLootTask(GroupObject* gr, CreatureObject* pl, AiAgent* ai, bool all) {
+	GroupLootTask(GroupObject* gr, CreatureObject* pl, AiAgent* ai, bool isAoe, bool all, SceneObject* firstLootContainero) {
 		group = gr;
 		player = pl;
 		corpse = ai;
 		lootAll = all;
+		aoe = isAoe;
+		firstLootContainer = firstLootContainero;
+		lootRange = 128;
 	}
 
 	void run() {
@@ -82,8 +87,8 @@ public:
 			gclocker.release();
 			splitCredits();
 			if (lootContainer->getContainerObjectsSize() < 1) {
-				StringIdChatParameter noItems("group", "corpse_empty");
-				player->sendSystemMessage(noItems); //"This corpse has no items in its inventory."
+				// StringIdChatParameter noItems("group", "corpse_empty");
+				// player->sendSystemMessage(noItems); //"This corpse has no items in its inventory."
 				player->getZoneServer()->getPlayerManager()->rescheduleCorpseDestruction(player, corpse);
 				return;
 			}
@@ -109,15 +114,34 @@ public:
 			}
 		} else {
 			gclocker.release();
-			Locker lootlocker(player, corpse);
+			if (aoe) {
+				splitCredits();
+			}
+
 			corpse->notifyObservers(ObserverEventType::LOOTCREATURE, player, 0);
+			// if (corpse->isCreature()) {
+			// 	ManagedReference<Creature*> cr = cast<Creature*>( corpse.get());
+			// 	if (cr != nullptr) {
+			// 		handleHarvesting(cr);
+			// 	}
+			// }
+
+			if (lootContainer == firstLootContainer) {
+				lootContainer->openContainerTo(player);
+			}
 
 			if (lootContainer->getContainerObjectsSize() < 1) {
-				StringIdChatParameter msg("group","corpse_empty"); //"This corpse has no items in its inventory."
-				player->sendSystemMessage(msg);
+				if (!corpse->isLootCollector()) {
+					player->getZoneServer()->getPlayerManager()->rescheduleCorpseDestruction(player, corpse);
+				}
+				//StringIdChatParameter msg("group","corpse_empty"); //"This corpse has no items in its inventory."
+				//player->sendSystemMessage(msg);
 				return;
-			} else {
-				lootContainer->openContainerTo(player);
+			}
+			else {
+				if (!corpse->isLootCollector()) {
+					transferLootItemsToInitialLootContainer(lootContainer);
+				}
 			}
 		}
 
@@ -234,6 +258,24 @@ public:
 		}
 
 		return false;
+	}
+
+	void transferLootItemsToInitialLootContainer(SceneObject* lootContainer) {
+		if (corpse != nullptr && player != nullptr && lootContainer != nullptr) {
+			int totalItems = lootContainer->getContainerObjectsSize();
+			if (totalItems > 0) {
+				for (int i = totalItems - 1; i >= 0; --i) {
+					SceneObject* object = lootContainer->getContainerObject(i);
+					if (object == nullptr) 
+						continue;
+					
+					Locker containerLocker(lootContainer, firstLootContainer);
+						
+					corpse->getZoneServer()->getObjectController()->transferObject(object, firstLootContainer, -1, true, true);		
+					player->getZoneServer()->getPlayerManager()->rescheduleCorpseDestruction(player, corpse);
+				}
+			}
+		}
 	}
 
 };
