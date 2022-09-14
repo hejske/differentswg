@@ -9,6 +9,8 @@
 #include "server/zone/managers/collision/CollisionManager.h"
 #include "server/zone/managers/frs/FrsManager.h"
 #include "server/zone/objects/player/FactionStatus.h"
+#include "server/zone/objects/building/BuildingObject.h"
+#include "server/zone/objects/creature/events/HealOverTimeTask.h"
 
 ForceHealQueueCommand::ForceHealQueueCommand(const String& name, ZoneProcessServer* server) : JediQueueCommand(name, server) {
 	speed = 3;
@@ -43,6 +45,24 @@ ForceHealQueueCommand::ForceHealQueueCommand(const String& name, ZoneProcessServ
 
 	clientEffect = "clienteffect/pl_force_heal_self.cef";
 	animationCRC = STRING_HASHCODE("force_healing_1");
+
+	healingScaling = 0;
+
+	isArea = false;
+
+	isJediHealOverTime = false;
+
+	hotHealAmount = 0;
+
+	hotTicks = 3;
+
+	hotTickFrequency = 3;
+
+	hotHealingScaling = 0;
+
+	maxHotTicks = hotTicks * 3;
+
+
 }
 
 int ForceHealQueueCommand::runCommand(CreatureObject* creature, CreatureObject* targetCreature) const {
@@ -54,6 +74,80 @@ int ForceHealQueueCommand::runCommand(CreatureObject* creature, CreatureObject* 
 	int currentForce = playerObject->getForcePower();
 	int totalCost = forceCost;
 	bool healPerformed = false;
+
+	int actualHealAmount = 0;
+	int actualHotHealAmount = 0;
+
+	int healingPower = creature->getSkillMod("force_healing_power");
+
+	int moreHealing = creature->getSkillMod("more_force_healing") + creature->getSkillMod("more_healing");
+
+	int increasedHealing = creature->getSkillMod("increased_force_healing");
+
+	//regular healing calc
+	if (healAmount > 0) {
+		//flat healing power
+		if (healingScaling != 0) {
+			if (healingPower > 0) {
+				actualHealAmount = healAmount + healingScaling * healingPower;
+			}
+		}
+	
+		//% healing increase
+		if (increasedHealing > 0)
+			actualHealAmount *= (1 + increasedHealing / 100.f);
+
+		//more force healing
+		if (moreHealing > 0)
+			actualHealAmount *= (1 + moreHealing / 100.f);
+	}
+
+	//hot healing calc
+	if (hotHealAmount > 0) {
+		//flat healing power
+		if (hotHealingScaling != 0) {
+			if (healingPower > 0) {
+				actualHotHealAmount = hotHealAmount + hotHealingScaling * healingPower;
+			}
+		}
+		//% healing increase
+		if (increasedHealing > 0)
+			actualHotHealAmount *= (1 + increasedHealing / 100.f);
+
+		//more force healing
+		if (moreHealing > 0)
+			actualHotHealAmount *= (1 + moreHealing / 100.f);
+	}
+
+		//check for crit
+		int critRating = creature->getSkillMod("increased_force_healing_critical_chance") + creature->getSkillMod("increased_healing_critical_chance") + creature->getSkillMod("increased_critical_chance");
+		if (critRating > 0) {
+			if (System::random(100) < 5 * (1 + critRating / 100.f) + 1) {
+				actualHealAmount *= 1.5 + 0.5 * ((creature->getSkillMod("increased_force_healing_critical_amount") + creature->getSkillMod("increased_healing_critical_amount")) / 100.f);
+			}
+		}
+		else {
+			if (System::random(100) < 6) {
+				actualHealAmount *= 1.5 + 0.5 * ((creature->getSkillMod("increased_force_healing_critical_amount") + creature->getSkillMod("increased_healing_critical_amount")) / 100.f);
+			}
+		}
+
+	if (isArea && currentForce > totalCost) {
+		//creature->sendSystemMessage("You attempt to cast an area force heal");
+		if (creature == targetCreature) {
+			creature->playEffect(clientEffect, "");
+		}
+		else {
+			creature->doCombatAnimation(targetCreature, animationCRC, 0, 0xFF);
+		}
+		handleJediHealArea(creature, creature, targetCreature, actualHealAmount);
+		playerObject->setForcePower(currentForce - totalCost);
+		return SUCCESS;
+	}
+
+	if (isJediHealOverTime) {
+		handleJediHealOverTime(targetCreature, actualHotHealAmount);
+	}
 
 	// Attribute Wound Healing
 	for (int i = 0; i < 3; i++) {
@@ -95,8 +189,8 @@ int ForceHealQueueCommand::runCommand(CreatureObject* creature, CreatureObject* 
 				int maxHam = targetCreature->getMaxHAM(attrib) - targetCreature->getWounds(attrib);
 				int amtToHeal = maxHam - curHam;
 
-				if (healAmount > 0 && amtToHeal > healAmount)
-					amtToHeal = healAmount;
+				if (actualHealAmount > 0 && amtToHeal > actualHealAmount)
+					amtToHeal = actualHealAmount;
 
 				totalCost += amtToHeal * forceCostMultiplier;
 
@@ -465,4 +559,148 @@ int ForceHealQueueCommand::doQueueCommand(CreatureObject* creature, const uint64
 		retval = runCommand(creature, targetCreature);
 
 	return retval;
+}
+
+void ForceHealQueueCommand::handleJediHealArea(CreatureObject* creature, CreatureObject* animCreature, CreatureObject* areaCenter, int healingToDoDo) const {
+
+	Zone* zone = creature->getZone();
+
+	if (zone == nullptr)
+		return;
+
+	try {
+		CloseObjectsVector* closeObjectsVector = (CloseObjectsVector*) areaCenter->getCloseObjects();
+		SortedVector<QuadTreeEntry*> closeObjects;
+		closeObjectsVector->safeCopyReceiversTo(closeObjects, CloseObjectsVector::CREOTYPE);
+
+		for (int i = 0; i < closeObjects.size(); i++) {	
+			SceneObject* object = static_cast<SceneObject*>( closeObjects.get(i));
+			if (!object->isPlayerCreature() && !object->isPet())
+				continue;
+			if (object->isDroidObject())
+			// if (object == areaCenter || object->isDroidObject())
+				continue;
+			if (areaCenter->getWorldPosition().distanceTo(object->getWorldPosition()) - object->getTemplateRadius() > areaHealRange)
+				continue;
+			CreatureObject* targetCreature = cast<CreatureObject*>( object);
+			if (targetCreature->isAttackableBy(creature))
+				continue;
+			if (!targetCreature->isHealableBy(creature))
+				continue;
+			if (creature->isPlayerCreature() && object->getParentID() != 0 && creature->getParentID() != object->getParentID()) {
+				Reference<CellObject*> targetCell = object->getParent().get().castTo<CellObject*>();
+				if (targetCell != nullptr) {
+					if (object->isPlayerCreature()) {
+						auto perms = targetCell->getContainerPermissions();
+						if (!perms->hasInheritPermissionsFromParent()) {
+							if (!targetCell->checkContainerPermission(creature, ContainerPermissions::WALKIN))
+								continue;
+						}
+					}
+					ManagedReference<SceneObject*> parentSceneObject = targetCell->getParent().get();
+					if (parentSceneObject != nullptr) {
+						BuildingObject* buildingObject = parentSceneObject->asBuildingObject();
+						if (buildingObject != nullptr && !buildingObject->isAllowedEntry(creature))
+							continue;
+					}
+				}
+			}
+			if (creature != targetCreature && checkForArenaDuel(targetCreature))
+				continue;
+
+
+			try {
+				Locker crossLocker(targetCreature, creature);
+				if (checkjediHealAreaTarget(creature, targetCreature)) {
+					// creature->doCombatAnimation(targetCreature, STRING_HASHCODE("force_intimidate_chain"), 0x01, 0xFF);
+					if (animCreature != targetCreature) {
+						animCreature->doCombatAnimation(targetCreature, animationCRC, 0, 0xFF);
+						animCreature = targetCreature;
+					}	
+					if (healingToDoDo > 0) {
+						if (targetCreature->hasDamage(CreatureAttribute::HEALTH)|| targetCreature->hasDamage(CreatureAttribute::ACTION) || targetCreature->hasDamage(CreatureAttribute::MIND)) {
+							doAreaJediHealAction(animCreature, targetCreature, healingToDoDo);
+						}
+						if (isJediHealOverTime) {
+							int hotHealing = healingToDoDo / 5.f;
+							if (hotHealing > 0) {
+								handleJediHealOverTime(targetCreature, healingToDoDo);
+							}
+						}
+					}
+				}
+			} 
+			catch (Exception& e) {}
+		} 
+	} 
+	catch (Exception& e) {}
+}
+
+bool ForceHealQueueCommand::checkjediHealAreaTarget(CreatureObject* creature, CreatureObject* targetCreature)  const {
+	// if (!targetCreature->hasDamage(CreatureAttribute::HEALTH) && !targetCreature->hasDamage(CreatureAttribute::ACTION) && !targetCreature->hasDamage(CreatureAttribute::MIND)) {
+	// 	return false;
+	// }
+
+	// PlayerManager* playerManager = server->getPlayerManager();
+
+	if (creature != targetCreature && !CollisionManager::checkLineOfSight(creature, targetCreature)) {
+		return false;
+	}
+
+	if (targetCreature->isDead())
+		return false;
+
+	return true;
+}
+
+void ForceHealQueueCommand::handleJediHealOverTime(CreatureObject* targetCreature, int healing) const {
+	// if (creature == targetCreature) {
+	// 	creature->playEffect(clientEffect, "");
+	// 	// creature->sendSystemMessage("You cast a heal over time effect on yourself");
+	// }
+	// else {
+	// 	creature->doCombatAnimation(targetCreature, animationCRC, 0, 0xFF);
+	// 	// creature->sendSystemMessage("You cast a heal over time effect");
+	// 	targetCreature-> sendSystemMessage("A heal over time effect was cast on you");
+	// }
+
+	StringBuffer buff;
+	buff << getName() << "healovertimetask";	
+	Reference<HealOverTimeTask*> hotCheck = targetCreature->getPendingTask(buff.toString()).castTo<HealOverTimeTask*>();
+	if(hotCheck != nullptr) {
+		int ticks = hotCheck->getTicks();
+		if ((ticks + hotTicks) > maxHotTicks) {
+			hotCheck->setTicks(maxHotTicks);
+		}
+		else {
+			hotCheck->setTicks(ticks + hotTicks);
+		}
+
+		int hotHealing = hotCheck->getHealing();
+		if (hotHealing < healing)
+			hotCheck->setHealing(healing);
+	}
+	else {
+		Reference<HealOverTimeTask*> jediHealOverTimeTask = new HealOverTimeTask(targetCreature, healing, buff.toString(), hotTicks, hotTickFrequency);
+		targetCreature->addPendingTask(buff.toString(), jediHealOverTimeTask, 3000);
+	}
+}
+
+void ForceHealQueueCommand::doAreaJediHealAction(CreatureObject* creature, CreatureObject* targetCreature, int healingToDo) const {
+	for (int i = 0; i < 3; i++) {
+		// Attrib Values: Health = 1, Action = 2, Mind = 4
+		if (attributesToHeal & (1 << i)) {
+			uint8 attrib = i * 3;
+			int curHam = targetCreature->getHAM(attrib);
+			int maxHam = targetCreature->getMaxHAM(attrib) - targetCreature->getWounds(attrib);
+			int amtToHeal = maxHam - curHam;
+
+			healingToDo *= targetCreature->calculateBFRatio();
+
+			if (amtToHeal > 0) {
+				targetCreature->healDamage(creature, attrib, healingToDo, true);
+				// sendHealMessage(creature, targetCreature, HEAL_DAMAGE, attrib, amtToHeal);
+			}
+		}
+	}
 }

@@ -82,6 +82,24 @@ protected:
 
 	int range; // range to heal up to, if <= 0 it heals the user
 
+	float healingScaling;
+
+	bool isArea;
+
+	int areaHealRange;
+
+	bool isJediHealOverTime;
+
+	int hotTicks;
+
+	int hotTickFrequency;
+
+	int hotHealAmount;
+
+	float hotHealingScaling;
+
+	int maxHotTicks;
+
 public:
 	ForceHealQueueCommand(const String& name, ZoneProcessServer* server);
 
@@ -92,6 +110,14 @@ public:
 	int runCommand(CreatureObject* creature, CreatureObject* targetCreature) const;
 
 	int doQueueCommand(CreatureObject* creature, const uint64& target, const UnicodeString& arguments) const override;
+
+	void handleJediHealArea(CreatureObject* creature, CreatureObject* animCreature, CreatureObject* areaCenter, int healingToDoDo) const;
+
+	void doAreaJediHealAction(CreatureObject* creature, CreatureObject* targetCreature, int healingToDo) const;
+
+	bool checkjediHealAreaTarget(CreatureObject* creature, CreatureObject* targetCreature) const;
+
+	void handleJediHealOverTime(CreatureObject* targetCreature, int healing) const;
 
 	bool isForceHealCommand() const override {
 		return true;
@@ -173,6 +199,53 @@ public:
 		allowedTarget = t;
 	}
 
+	void setHealingScaling(float val) {
+		healingScaling = val;
+	}
+
+	void setIsArea(bool val) {
+		isArea = val;
+	}
+
+	void setIsJediHealOverTime(bool val) {
+		isJediHealOverTime = val;
+	}
+
+	void setAreaHealRange(unsigned int val) {
+		areaHealRange = val;
+	}
+
+	void setHotTicks(int val) {
+		hotTicks = val;
+	}
+
+	void setHotTickFrequency(int val) {
+		hotTickFrequency = val;
+	}
+
+	void setHotHealAmount(int val) {
+		hotHealAmount = val;
+	}
+
+	void setHotHealingScaling(float val) {
+		hotHealingScaling = val;
+	}
+
+	void setMaxHotTicks(int val) {
+		maxHotTicks = val;
+	}
+
+	float getCommandDuration(CreatureObject *object, const UnicodeString& arguments) const {
+		float combatHaste = object->getSkillMod("combat_haste");
+		int forcePowersSpeed = object->getSkillMod("force_healing_speed");
+		float realSpeed = speed;
+		if (forcePowersSpeed > 0)
+			realSpeed *= (1.f + forcePowersSpeed / 100.f);
+		if (combatHaste > 0)
+			return realSpeed * (1.f - (combatHaste / 100.f));
+		else
+			return realSpeed;
+	}
 };
 
 #endif /* FORCEHEALQUEUECOMMAND_H_ */
