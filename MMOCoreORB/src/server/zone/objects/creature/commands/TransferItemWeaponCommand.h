@@ -132,22 +132,37 @@ public:
 				if (objectToTransfer->isWeaponObject()) {
 					WeaponObject* weaponObject = cast<WeaponObject*>( objectToTransfer.get());
 
-					creature->setWeapon(weaponObject, true);
+					//creature->setWeapon(weaponObject, true);
+					bool setWeapon = false;
+					int arrangementSize = weaponObject->getArrangementDescriptorSize();
+					for (int i = 0; i < arrangementSize; ++i) {
+						const Vector<String>* descriptors = weaponObject->getArrangementDescriptor(i);
+						for (int j = 0; j < descriptors->size(); ++j) {
+							const String& childArrangement = descriptors->get(j);
+							if (childArrangement.contains("hold_r")) {
+								setWeapon = true;
+								break;
+							}
+						}
+					}
+
+					if (setWeapon)
+						creature->setWeapon(weaponObject, true);
 
 					if (creature->isPlayerCreature()) {
 						CreatureObject* playerCreature = creature;
 
-						if (weaponObject->isCertifiedFor(playerCreature)) {
-							weaponObject->setCertified(true);
-						} else {
-							playerCreature->sendSystemMessage("@combat_effects:no_proficiency"); //You lack the necessary skills to use this weapon properly. Damage with this weapon will be greatly reduced
-							weaponObject->setCertified(false);
-						}
+						// if (weaponObject->isCertifiedFor(playerCreature)) {
+						// 	weaponObject->setCertified(true);
+						// } else {
+						// 	playerCreature->sendSystemMessage("@combat_effects:no_proficiency"); //You lack the necessary skills to use this weapon properly. Damage with this weapon will be greatly reduced
+						// 	weaponObject->setCertified(false);
+						//}
 
 						PlayerObject* ghost = playerCreature->getPlayerObject();
 
-						if (creature->hasBuff(STRING_HASHCODE("centerofbeing")))
-							creature->removeBuff(STRING_HASHCODE("centerofbeing"));
+						// if (creature->hasBuff(STRING_HASHCODE("centerofbeing")))
+						// 	creature->removeBuff(STRING_HASHCODE("centerofbeing"));
 
 						ManagedReference<PlayerManager*> playerManager = creature->getZoneServer()->getPlayerManager();
 						if (playerManager != nullptr) {
