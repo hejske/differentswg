@@ -73,12 +73,12 @@ class MigrateStatsSession extends Facade {
 			int realValue = newValue;
 
 			if (i == 0) {
-				incMod = creo->getSkillMod("increased_health");
+				incMod = creo.getSkillMod("increased_health");
 				if (incMod > 0)
 					realValue *= (1 + incMod / 100.f);
 			}
 			else if (i == 6) {
-				incMod = creo->getSkillMod("increased_mind");
+				incMod = creo.getSkillMod("increased_mind");
 				if (incMod > 0)
 					realValue *= (1 + incMod / 100.f);
 			}
