@@ -634,6 +634,10 @@ void CommandConfigManager::parseVariableData(String varName, LuaObject &command,
 			combatCommand->setForceCostMultiplier(Lua::getFloatParameter(L));
 		else if (varName == "forceCost")
 			combatCommand->setForceCost(Lua::getFloatParameter(L));
+		else if (varName == "dualWieldAttack") {
+			combatCommand->setDualWieldAttack((bool)lua_toboolean(L, -1));
+			command.pop();
+		}
 		else if (varName == "frsLightForceCostModifier")
 			combatCommand->setFrsLightForceCostModifier(Lua::getFloatParameter(L));
 		else if (varName == "frsDarkForceCostModifier")
@@ -646,6 +650,8 @@ void CommandConfigManager::parseVariableData(String varName, LuaObject &command,
 			combatCommand->setFrsDarkMinDamageModifier(Lua::getFloatParameter(L));
 		else if (varName == "frsDarkMaxDamageModifier")
 			combatCommand->setFrsDarkMaxDamageModifier(Lua::getFloatParameter(L));
+		else if (varName == "forcePowersDamageScaling")
+			combatCommand->setForcePowersDamageScaling(Lua::getFloatParameter(L));
 		else if (varName == "visMod")
 			combatCommand->setVisMod(Lua::getIntParameter(L));
 		else if (varName == "coneRange")
@@ -758,6 +764,26 @@ void CommandConfigManager::parseVariableData(String varName, LuaObject &command,
 				healCommand->setForceCostMultiplier(Lua::getFloatParameter(L));
 			else if (varName == "range")
 				healCommand->setRange(Lua::getIntParameter(L));
+			else if (varName == "healingScaling")
+				healCommand->setHealingScaling(Lua::getFloatParameter(L));
+			else if (varName == "isArea") {
+				healCommand->setIsArea((bool)lua_toboolean(L, -1));
+				command.pop();
+			}
+			else if (varName == "isJediHealOverTime") {
+				healCommand->setIsJediHealOverTime((bool)lua_toboolean(L, -1));
+				command.pop();
+			}
+			else if (varName == "hotHealAmount")
+				healCommand->setHotHealAmount(Lua::getIntParameter(L));
+			else if (varName == "hotTicks")
+				healCommand->setHotTicks(Lua::getIntParameter(L));
+			else if (varName == "hotTickFrequency")
+				healCommand->setHotTickFrequency(Lua::getIntParameter(L));
+			else if (varName == "hotHealingScaling")
+				healCommand->setHotHealingScaling(Lua::getFloatParameter(L));
+			else if (varName == "areaHealRange")
+				healCommand->setAreaHealRange(Lua::getIntParameter(L));
 			else if (varName == "healBleedingCost")
 				healCommand->setHealBleedingCost(Lua::getUnsignedIntParameter(L));
 			else if (varName == "healFireCost")
