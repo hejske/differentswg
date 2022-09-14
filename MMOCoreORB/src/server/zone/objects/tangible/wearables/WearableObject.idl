@@ -20,6 +20,8 @@ class WearableObject extends TangibleObject {
 
 	protected int modsNotInSockets;
 
+	protected int itemLevel;
+
 	public static final int MAXSOCKETS = 4;
 	public static final int MIN_SOCKET_MOD = 60;
 
@@ -92,7 +94,7 @@ class WearableObject extends TangibleObject {
 	}
 
 	public abstract void addSkillMod(final int skillType, final string skillMod, int value, boolean notifyClient = true) {
-		if (wearableSkillMods.size() <= 6) {
+		if (wearableSkillMods.size() <= 20) {
 			wearableSkillMods.put(skillMod, value);
 			modsNotInSockets++;
 		}
@@ -106,5 +108,15 @@ class WearableObject extends TangibleObject {
 		}
 		socketCount = maxSockets;
 		socketsGenerated = true;
+	}
+
+	@preLocked
+	public void setItemLevel(int val) {
+		itemLevel = val;
+	}
+
+	@read
+	public native int getItemLevel() {
+		return itemLevel;
 	}
 }
