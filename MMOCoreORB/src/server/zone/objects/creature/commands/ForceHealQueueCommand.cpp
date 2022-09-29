@@ -82,7 +82,7 @@ int ForceHealQueueCommand::runCommand(CreatureObject* creature, CreatureObject* 
 
 	int moreHealing = creature->getSkillMod("more_force_healing") + creature->getSkillMod("more_healing");
 
-	int increasedHealing = creature->getSkillMod("increased_force_healing");
+	int increasedHealing = creature->getSkillMod("increased_force_healing") + creature->getHAM(CreatureAttribute::WILLPOWER) / 5.f;
 
 	//regular healing calc
 	if (healAmount > 0) {
