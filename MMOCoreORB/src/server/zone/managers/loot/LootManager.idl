@@ -89,6 +89,31 @@ class LootManager extends ManagedService implements Logger {
 	private transient SortedVector<string> lootableHeavyWeaponMods;
 
 	@dereferenced
+	private transient VectorMap<string, int> lootablePistolModsValues;
+	@dereferenced
+	private transient VectorMap<string, int> lootableHeavyWeaponModsValues;
+	@dereferenced
+	private transient VectorMap<string, int> lootablePolearmModsValues;
+	@dereferenced
+	private transient VectorMap<string, int> lootableCarbineModsValues;
+	@dereferenced
+	private transient VectorMap<string, int> lootableRifleModsValues;
+	@dereferenced
+	private transient VectorMap<string, int> lootableUnarmedModsValues;
+	@dereferenced
+	private transient VectorMap<string, int> lootableTwoHandedMeleeModsValues;
+	@dereferenced
+	private transient VectorMap<string, int> lootableOneHandedMeleeModsValues;
+	@dereferenced
+	private transient VectorMap<string, int> lootableClothingModsValues;
+	@dereferenced
+	private transient VectorMap<string, int> lootableArmorModsValues;
+	@dereferenced
+	private transient VectorMap<string, int> lootableClothingAttachmentModsValues;
+	@dereferenced
+	private transient VectorMap<string, int> lootableArmorAttachmentModsValues;
+
+	@dereferenced
 	private transient VectorMap<string, Reference<CrystalData> > crystalData;
 
 	public LootManager(CraftingManager craftman, ObjectManager objMan, ZoneServer server) {
@@ -159,10 +184,20 @@ class LootManager extends ManagedService implements Logger {
 	private native void loadLootableMods( LuaObject modTable, SortedVector<string> mods );
 
 	@local
+	private native void loadLootableModsValues( LuaObject modTable, VectorMap<string, int> mods );
+
+	@local
 	public native TangibleObject createLootObject(final LootItemTemplate templateObject, int level, boolean maxCondition = false);
 
 	@local
 	public native string getRandomLootableMod( unsigned int sceneObjectType );
+
+	@local
+	public native int getRandomLootableModValue(unsigned int sceneObjectType, final string lootTemplateName);
+
+	@local
+	@dereferenced
+	public native VectorMap<string, int> getSkillModTable(unsigned int sceneObjectType);
 
 	public native int calculateLootCredits(int level);
 

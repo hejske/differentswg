@@ -158,6 +158,45 @@ bool LootManagerImplementation::loadConfigData() {
 	modsTable = lua->getGlobalObject("lootableHeavyWeaponStatMods");
 	loadLootableMods( &modsTable, &lootableHeavyWeaponMods );
 
+	LuaObject modsTableValues = lua->getGlobalObject("lootableArmorAttachmentStatModsValues");
+	loadLootableModsValues( &modsTableValues, &lootableArmorAttachmentModsValues );
+
+	modsTableValues = lua->getGlobalObject("lootableClothingAttachmentStatModsValues");
+	loadLootableModsValues( &modsTableValues, &lootableClothingAttachmentModsValues );
+
+	modsTable = lua->getGlobalObject("lootableArmorStatModsValues");
+	loadLootableModsValues( &modsTableValues, &lootableArmorModsValues );
+
+	modsTable = lua->getGlobalObject("lootableClothingStatModsValues");
+	loadLootableModsValues( &modsTableValues, &lootableClothingModsValues );
+
+	modsTable = lua->getGlobalObject("lootableOneHandedMeleeStatModsValues");
+	loadLootableModsValues( &modsTableValues, &lootableOneHandedMeleeModsValues );
+
+	modsTable = lua->getGlobalObject("lootableTwoHandedMeleeStatModsValues");
+	loadLootableModsValues( &modsTableValues, &lootableTwoHandedMeleeModsValues );
+
+	modsTable = lua->getGlobalObject("lootableUnarmedStatModsValues");
+	loadLootableModsValues( &modsTableValues, &lootableUnarmedModsValues );
+
+	modsTable = lua->getGlobalObject("lootablePistolStatModsValues");
+	loadLootableModsValues( &modsTableValues, &lootablePistolModsValues );
+
+	modsTable = lua->getGlobalObject("lootableRifleStatModsValues");
+	loadLootableModsValues( &modsTableValues, &lootableRifleModsValues );
+
+	modsTable = lua->getGlobalObject("lootableCarbineStatModsValues");
+	loadLootableModsValues( &modsTableValues, &lootableCarbineModsValues );
+
+	modsTable = lua->getGlobalObject("lootablePolearmStatModsValues");
+	loadLootableModsValues( &modsTableValues, &lootablePolearmModsValues );
+
+	modsTable = lua->getGlobalObject("lootableHeavyWeaponStatModsValues");
+	loadLootableModsValues( &modsTableValues, &lootableHeavyWeaponModsValues );
+
+	modsTableValues = lua->getGlobalObject("lootablePistolStatModsValues");
+	loadLootableModsValues( &modsTableValues, &lootablePistolModsValues );
+
 	LuaObject luaObject = lua->getGlobalObject("jediCrystalStats");
 	LuaObject crystalTable = luaObject.getObjectField("lightsaber_module_force_crystal");
 	CrystalData* crystal = new CrystalData();
@@ -175,6 +214,26 @@ bool LootManagerImplementation::loadConfigData() {
 	delete lua;
 
 	return true;
+}
+
+void LootManagerImplementation::loadLootableModsValues(LuaObject* modsTableValues, VectorMap<String, int>* mods) {
+	if (!modsTableValues->isValidTable()) {
+		error("Invalid emoteReactionLevels table.");
+	} else {
+
+		for(int i = 1; i <= modsTableValues->getTableSize(); ++i) {
+			LuaObject entry = modsTableValues->getObjectAt(i);
+
+			String name = entry.getStringAt(1);
+			int value = entry.getIntAt(2);
+
+			mods->put(name, value);
+
+			entry.pop();
+		}
+
+		modsTableValues->pop();
+	}
 }
 
 void LootManagerImplementation::loadLootableMods(LuaObject* modsTable, SortedVector<String>* mods) {
@@ -262,8 +321,8 @@ TangibleObject* LootManagerImplementation::createLootObject(const LootItemTempla
 	if(level < 1)
 		level = 1;
 
-	if(level > 300)
-		level = 300;
+	// if(level > 300)
+	// 	level = 300;
 
 	const String& directTemplateObject = templateObject->getDirectObjectTemplate();
 
@@ -304,25 +363,25 @@ TangibleObject* LootManagerImplementation::createLootObject(const LootItemTempla
 
 	float adjustment = floor((float)(((level > 50) ? level : 50) - 50) / 10.f + 0.5);
 
-	if (System::random(legendaryChance) >= legendaryChance - adjustment) {
-		UnicodeString newName = prototype->getDisplayedName() + " (Legendary)";
-		prototype->setCustomObjectName(newName, false);
+	// if (System::random(legendaryChance) >= legendaryChance - adjustment) {
+	// 	UnicodeString newName = prototype->getDisplayedName() + " (Legendary)";
+	// 	prototype->setCustomObjectName(newName, false);
 
-		excMod = legendaryModifier;
+	// 	excMod = legendaryModifier;
 
-		prototype->addMagicBit(false);
+	// 	prototype->addMagicBit(false);
 
-		legendaryLooted.increment();
-	} else if (System::random(exceptionalChance) >= exceptionalChance - adjustment) {
-		UnicodeString newName = prototype->getDisplayedName() + " (Exceptional)";
-		prototype->setCustomObjectName(newName, false);
+	// 	legendaryLooted.increment();
+	// } else if (System::random(exceptionalChance) >= exceptionalChance - adjustment) {
+	// 	UnicodeString newName = prototype->getDisplayedName() + " (Exceptional)";
+	// 	prototype->setCustomObjectName(newName, false);
 
-		excMod = exceptionalModifier;
+	// 	excMod = exceptionalModifier;
 
-		prototype->addMagicBit(false);
+	// 	prototype->addMagicBit(false);
 
-		exceptionalLooted.increment();
-	}
+	// 	exceptionalLooted.increment();
+	// }
 
 	if (prototype->isLightsaberCrystalObject()) {
 		LightsaberCrystalComponent* crystal = cast<LightsaberCrystalComponent*> (prototype.get());
@@ -512,6 +571,10 @@ void LootManagerImplementation::setSkillMods(TangibleObject* object, const LootI
 	if (!object->isWeaponObject() && !object->isWearableObject())
 		return;
 
+	ManagedReference<WearableObject*> wearO = cast<WearableObject*>(object);
+
+	ManagedReference<WeaponObject*> weapO = cast<WeaponObject*>(object);
+
 	const VectorMap<String, int>* skillMods = templateObject->getSkillMods();
 	VectorMap<String, int> additionalMods;
 
@@ -521,28 +584,86 @@ void LootManagerImplementation::setSkillMods(TangibleObject* object, const LootI
 	if (System::random(skillModChance / modSqr) == 0) {
 		// if it has a skillmod the name will be yellow
 		yellow = true;
-		int modCount = 1;
-		int roll = System::random(100);
+		//int modCount = 1;
+		int modCount = System::random(2) + 4;
+		//int roll = System::random(100);
 
-		if(roll > (100 - modSqr))
-			modCount += 2;
+		// if(roll > (100 - modSqr))
+		// 	modCount += 2;
 
-		if(roll < (5 + modSqr))
-			modCount += 1;
+		// if(roll < (5 + modSqr))
+		// 	modCount += 1;
+		String modName;
+		//int modValue;
 
 		for(int i = 0; i < modCount; ++i) {
-			//Mods can't be lower than -1 or greater than 25
-			int max = (int) Math::max(-1.f, Math::min(25.f, (float) round(0.1f * level + 3)));
-			int min = (int) Math::max(-1.f, Math::min(25.f, (float) round(0.075f * level - 1)));
+			// //Mods can't be lower than -1 or greater than 25
+			// int max = (int) Math::max(-1.f, Math::min(25.f, (float) round(0.1f * level + 3)));
+			// int min = (int) Math::max(-1.f, Math::min(25.f, (float) round(0.075f * level - 1)));
 
-			int mod = System::random(max - min) + min;
+			VectorMap<String, int> table = getSkillModTable(object->getGameObjectType());
 
-			if(mod == 0)
-				mod = 1;
+			if (table.size() > 0) {
+				int roll = System::random(table.size()) - 1;
+				modName = table.elementAt(roll).getKey();
+				//int modValue = table.get(roll).getValue();
+				int newRoll = 0;
 
-			String modName = getRandomLootableMod( object->getGameObjectType() );
-			if( !modName.isEmpty() )
-				additionalMods.put(modName, mod);
+				if (wearO != nullptr) {
+					while (wearO->getWearableSkillMods()->contains(modName)) {
+						newRoll = System::random(table.size() - 1);
+						while (newRoll == roll) {
+							roll = newRoll;
+							newRoll = System::random(table.size() - 1);
+						}
+
+						modName = table.elementAt(newRoll).getKey();
+					}
+				}
+				else if (weapO != nullptr) {
+					while (weapO->getWearableSkillMods()->contains(modName)) {
+						newRoll = System::random(table.size() - 1);
+						while (newRoll == roll) {
+							roll = newRoll;
+							newRoll = System::random(table.size() - 1);
+						}
+
+						modName = table.elementAt(newRoll).getKey();
+					}
+				}
+
+				int maxModValue = table.elementAt(newRoll).getValue();
+				int minMaxModValue = maxModValue / 4.f;
+				int minModValue = 1;
+
+				int actualMaxValue = level / 400.f * maxModValue;
+				if (actualMaxValue < minMaxModValue) {
+					actualMaxValue = minMaxModValue;
+				}
+				else if (actualMaxValue > maxModValue) {
+					actualMaxValue = maxModValue;
+				}
+
+				int actualModValue = System::random(actualMaxValue);
+
+				if (actualModValue < minModValue) {
+					actualModValue = minModValue;
+				}
+
+				additionalMods.put(modName, actualModValue);
+			}
+
+
+
+
+			//int mod = System::random(max - min) + min;
+
+			// if(mod == 0)
+			// 	mod = 1;
+
+			// String modName = getRandomLootableMod( object->getGameObjectType() );
+			// if( !modName.isEmpty() )
+			// 	additionalMods.put(modName, mod);
 		}
 	}
 
@@ -565,18 +686,146 @@ void LootManagerImplementation::setSkillMods(TangibleObject* object, const LootI
 		object->addMagicBit(false);
 }
 
-String LootManagerImplementation::getRandomLootableMod( unsigned int sceneObjectType ) {
+VectorMap<String, int> LootManagerImplementation::getSkillModTable(unsigned int sceneObjectType) {
+	
+
 	if( sceneObjectType == SceneObjectType::ARMORATTACHMENT ){
-		return lootableArmorAttachmentMods.get(System::random(lootableArmorAttachmentMods.size() - 1));
+			return lootableClothingModsValues;
 	}
 	else if( sceneObjectType == SceneObjectType::CLOTHINGATTACHMENT ){
-		return lootableClothingAttachmentMods.get(System::random(lootableClothingAttachmentMods.size() - 1));
+		return lootableClothingModsValues;
 	}
 	else if( sceneObjectType == SceneObjectType::ARMOR || sceneObjectType == SceneObjectType::BODYARMOR ||
 			 sceneObjectType == SceneObjectType::HEADARMOR || sceneObjectType == SceneObjectType::MISCARMOR ||
 			 sceneObjectType == SceneObjectType::LEGARMOR || sceneObjectType == SceneObjectType::ARMARMOR ||
 			 sceneObjectType == SceneObjectType::HANDARMOR || sceneObjectType == SceneObjectType::FOOTARMOR ){
-		return lootableArmorMods.get(System::random(lootableArmorMods.size() - 1));
+			return lootableClothingModsValues;
+	}
+	else if( sceneObjectType == SceneObjectType::CLOTHING || sceneObjectType == SceneObjectType::BANDOLIER ||
+			 sceneObjectType == SceneObjectType::BELT || sceneObjectType == SceneObjectType::BODYSUIT ||
+		     sceneObjectType == SceneObjectType::CAPE || sceneObjectType == SceneObjectType::CLOAK ||
+			 sceneObjectType == SceneObjectType::FOOTWEAR || sceneObjectType == SceneObjectType::DRESS ||
+			 sceneObjectType == SceneObjectType::HANDWEAR || sceneObjectType == SceneObjectType::EYEWEAR ||
+			 sceneObjectType == SceneObjectType::HEADWEAR || sceneObjectType == SceneObjectType::JACKET ||
+			 sceneObjectType == SceneObjectType::PANTS || sceneObjectType == SceneObjectType::ROBE ||
+			 sceneObjectType == SceneObjectType::SHIRT || sceneObjectType == SceneObjectType::VEST ||
+			 sceneObjectType == SceneObjectType::WOOKIEGARB || sceneObjectType == SceneObjectType::MISCCLOTHING ||
+			 sceneObjectType == SceneObjectType::SKIRT || sceneObjectType == SceneObjectType::WEARABLECONTAINER ||
+			 sceneObjectType == SceneObjectType::JEWELRY || sceneObjectType == SceneObjectType::RING ||
+			 sceneObjectType == SceneObjectType::BRACELET || sceneObjectType == SceneObjectType::NECKLACE ||
+			 sceneObjectType == SceneObjectType::EARRING ){
+		return lootableClothingModsValues;
+	}
+	else if( sceneObjectType == SceneObjectType::ONEHANDMELEEWEAPON ){
+		//return (System::random(lootableOneHandedMeleeModsValues.size() - 1));
+		return lootableOneHandedMeleeModsValues;
+	}
+	else if( sceneObjectType == SceneObjectType::TWOHANDMELEEWEAPON ){
+		//return (System::random(lootableTwoHandedMeleeModsValues.size() - 1));
+		return lootableTwoHandedMeleeModsValues;
+	}
+	else if( sceneObjectType == SceneObjectType::MELEEWEAPON ){
+		//return (System::random(lootableUnarmedModsValues.size() - 1));
+		return lootableUnarmedModsValues;
+	}
+	else if( sceneObjectType == SceneObjectType::PISTOL ){
+		//return (System::random(lootablePistolModsValues.size() - 1));
+		return lootablePistolModsValues;
+	}
+	else if( sceneObjectType == SceneObjectType::RIFLE ){
+		//return (System::random(lootableRifleModsValues.size() - 1));
+		return lootableRifleModsValues;
+	}
+	else if( sceneObjectType == SceneObjectType::CARBINE ){
+		//return (System::random(lootableCarbineModsValues.size() - 1));
+		return lootableCarbineModsValues;
+	}
+	else if( sceneObjectType == SceneObjectType::POLEARM ){
+		//return (System::random(lootablePolearmModsValues.size() - 1));
+		return lootablePolearmModsValues;
+	}
+	else if( sceneObjectType == SceneObjectType::SPECIALHEAVYWEAPON ){
+		//return (System::random(lootableHeavyWeaponModsValues.size() - 1));
+		return lootableHeavyWeaponModsValues;
+	}
+	else{
+		return lootableClothingModsValues;
+	}
+}
+
+int LootManagerImplementation::getRandomLootableModValue(unsigned int sceneObjectType, const String& lootTemplateName) {
+	if( sceneObjectType == SceneObjectType::ARMORATTACHMENT ){
+		return System::random(lootableClothingModsValues.size() - 1);
+	}
+	else if( sceneObjectType == SceneObjectType::CLOTHINGATTACHMENT ){
+		return System::random(lootableClothingModsValues.size() - 1);
+	}
+	else if( sceneObjectType == SceneObjectType::ARMOR || sceneObjectType == SceneObjectType::BODYARMOR ||
+			 sceneObjectType == SceneObjectType::HEADARMOR || sceneObjectType == SceneObjectType::MISCARMOR ||
+			 sceneObjectType == SceneObjectType::LEGARMOR || sceneObjectType == SceneObjectType::ARMARMOR ||
+			 sceneObjectType == SceneObjectType::HANDARMOR || sceneObjectType == SceneObjectType::FOOTARMOR ){
+		return (System::random(lootableClothingModsValues.size() - 1));
+	}
+	else if( sceneObjectType == SceneObjectType::CLOTHING || sceneObjectType == SceneObjectType::BANDOLIER ||
+			 sceneObjectType == SceneObjectType::BELT || sceneObjectType == SceneObjectType::BODYSUIT ||
+		     sceneObjectType == SceneObjectType::CAPE || sceneObjectType == SceneObjectType::CLOAK ||
+			 sceneObjectType == SceneObjectType::FOOTWEAR || sceneObjectType == SceneObjectType::DRESS ||
+			 sceneObjectType == SceneObjectType::HANDWEAR || sceneObjectType == SceneObjectType::EYEWEAR ||
+			 sceneObjectType == SceneObjectType::HEADWEAR || sceneObjectType == SceneObjectType::JACKET ||
+			 sceneObjectType == SceneObjectType::PANTS || sceneObjectType == SceneObjectType::ROBE ||
+			 sceneObjectType == SceneObjectType::SHIRT || sceneObjectType == SceneObjectType::VEST ||
+			 sceneObjectType == SceneObjectType::WOOKIEGARB || sceneObjectType == SceneObjectType::MISCCLOTHING ||
+			 sceneObjectType == SceneObjectType::SKIRT || sceneObjectType == SceneObjectType::WEARABLECONTAINER ||
+			 sceneObjectType == SceneObjectType::JEWELRY || sceneObjectType == SceneObjectType::RING ||
+			 sceneObjectType == SceneObjectType::BRACELET || sceneObjectType == SceneObjectType::NECKLACE ||
+			 sceneObjectType == SceneObjectType::EARRING ){
+		return (System::random(lootableClothingModsValues.size() - 1));
+	}
+	else if( sceneObjectType == SceneObjectType::ONEHANDMELEEWEAPON ){
+		return (System::random(lootableOneHandedMeleeModsValues.size() - 1));
+	}
+	else if( sceneObjectType == SceneObjectType::TWOHANDMELEEWEAPON ){
+		return (System::random(lootableTwoHandedMeleeModsValues.size() - 1));
+	}
+	else if( sceneObjectType == SceneObjectType::MELEEWEAPON ){
+		return (System::random(lootableUnarmedModsValues.size() - 1));
+	}
+	else if( sceneObjectType == SceneObjectType::PISTOL ){
+		return (System::random(lootablePistolModsValues.size() - 1));
+	}
+	else if( sceneObjectType == SceneObjectType::RIFLE ){
+		return (System::random(lootableRifleModsValues.size() - 1));
+	}
+	else if( sceneObjectType == SceneObjectType::CARBINE ){
+		return (System::random(lootableCarbineModsValues.size() - 1));
+	}
+	else if( sceneObjectType == SceneObjectType::POLEARM ){
+		return (System::random(lootablePolearmModsValues.size() - 1));
+	}
+	else if( sceneObjectType == SceneObjectType::SPECIALHEAVYWEAPON ){
+		return (System::random(lootableHeavyWeaponModsValues.size() - 1));
+	}
+	else{
+		return 1;
+	}
+
+}
+
+String LootManagerImplementation::getRandomLootableMod( unsigned int sceneObjectType ) {
+	if( sceneObjectType == SceneObjectType::ARMORATTACHMENT ){
+		//return lootableArmorAttachmentMods.get(System::random(lootableArmorAttachmentMods.size() - 1));
+		return lootableArmorAttachmentMods.get(System::random(lootableClothingMods.size() - 1));
+	}
+	else if( sceneObjectType == SceneObjectType::CLOTHINGATTACHMENT ){
+		//return lootableClothingAttachmentMods.get(System::random(lootableClothingAttachmentMods.size() - 1));
+		return lootableClothingAttachmentMods.get(System::random(lootableClothingMods.size() - 1));
+	}
+	else if( sceneObjectType == SceneObjectType::ARMOR || sceneObjectType == SceneObjectType::BODYARMOR ||
+			 sceneObjectType == SceneObjectType::HEADARMOR || sceneObjectType == SceneObjectType::MISCARMOR ||
+			 sceneObjectType == SceneObjectType::LEGARMOR || sceneObjectType == SceneObjectType::ARMARMOR ||
+			 sceneObjectType == SceneObjectType::HANDARMOR || sceneObjectType == SceneObjectType::FOOTARMOR ){
+		//return lootableArmorMods.get(System::random(lootableArmorMods.size() - 1));
+		return lootableArmorMods.get(System::random(lootableClothingMods.size() - 1));
 	}
 	else if( sceneObjectType == SceneObjectType::CLOTHING || sceneObjectType == SceneObjectType::BANDOLIER ||
 			 sceneObjectType == SceneObjectType::BELT || sceneObjectType == SceneObjectType::BODYSUIT ||
@@ -873,7 +1122,8 @@ void LootManagerImplementation::addRandomDots(TangibleObject* object, const Loot
 			number = 2;
 
 		for (int i = 0; i < number; i++) {
-			int dotType = System::random(2) + 1;
+			//int dotType = System::random(2) + 1;
+			int dotType = System::random(3) + 1;
 
 			weapon->addDotType(dotType);
 
@@ -904,11 +1154,17 @@ void LootManagerImplementation::addRandomDots(TangibleObject* object, const Loot
 			if (excMod == 1.0 && (yellowChance == 0 || System::random(yellowChance) == 0)) {
 				str *= yellowModifier;
 			}
-
+//-- 1 = Poison, 2 = Disease, 3 = Fire, 4 = Bleed
+			// if (dotType == 1)
+			// 	str = str * 2;
+			// else if (dotType == 3)
+			// 	str = str * 1.5;
 			if (dotType == 1)
-				str = str * 2;
+				str *= 3;
+			else if (dotType == 2)
+				str *= 4;
 			else if (dotType == 3)
-				str = str * 1.5;
+				str *= 2;
 
 			weapon->addDotStrength(str * excMod);
 
@@ -925,10 +1181,10 @@ void LootManagerImplementation::addRandomDots(TangibleObject* object, const Loot
 				dur *= yellowModifier;
 			}
 
-			if (dotType == 2)
-				dur = dur * 5;
-			else if (dotType == 3)
-				dur = dur * 1.5;
+			// if (dotType == 2)
+			// 	dur = dur * 5;
+			// else if (dotType == 3)
+			// 	dur = dur * 1.5;
 
 			weapon->addDotDuration(dur * excMod);
 
