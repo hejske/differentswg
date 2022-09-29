@@ -122,15 +122,15 @@ uint32 DamageOverTime::applyDot(CreatureObject* victim) {
 	switch(type) {
 	case CreatureState::BLEEDING:
 		power = doBleedingTick(victim, attacker);
-		nextTick.addMiliTime(2000);
+		nextTick.addMiliTime(1000);
 		break;
 	case CreatureState::POISONED:
 		power = doPoisonTick(victim, attacker);
-		nextTick.addMiliTime(2000);
+		nextTick.addMiliTime(3000);
 		break;
 	case CreatureState::DISEASED:
 		power = doDiseaseTick(victim, attacker);
-		nextTick.addMiliTime(2000);
+		nextTick.addMiliTime(4000);
 		break;
 	case CreatureState::ONFIRE:
 		power = doFireTick(victim, attacker);
@@ -138,7 +138,7 @@ uint32 DamageOverTime::applyDot(CreatureObject* victim) {
 		break;
 	case CommandEffect::FORCECHOKE:
 		power = doForceChokeTick(victim, attacker);
-		nextTick.addMiliTime(3000);
+		nextTick.addMiliTime(2000);
 		break;
 	}
 
@@ -153,7 +153,7 @@ uint32 DamageOverTime::initDot(CreatureObject* victim, CreatureObject* attacker)
 	switch(type) {
 	case CreatureState::BLEEDING:
 		absorptionMod = Math::max(0, Math::min(50, victim->getSkillMod("absorption_bleeding")));
-		nextTick.addMiliTime(2000);
+		nextTick.addMiliTime(1000);
 		break;
 	case CreatureState::ONFIRE:
 		absorptionMod = Math::max(0, Math::min(50, victim->getSkillMod("absorption_fire")));
@@ -161,14 +161,14 @@ uint32 DamageOverTime::initDot(CreatureObject* victim, CreatureObject* attacker)
 		break;
 	case CreatureState::POISONED:
 		absorptionMod = Math::max(0, Math::min(50, victim->getSkillMod("absorption_poison")));
-		nextTick.addMiliTime(2000);
+		nextTick.addMiliTime(3000);
 		break;
 	case CreatureState::DISEASED:
 		absorptionMod = Math::max(0, Math::min(50, victim->getSkillMod("absorption_disease")));
-		nextTick.addMiliTime(2000);
+		nextTick.addMiliTime(4000);
 		break;
 	case CommandEffect::FORCECHOKE:
-		nextTick.addMiliTime(3000);
+		nextTick.addMiliTime(2000);
 		strength *= ((100 - System::random(20)) * 0.01f);
 		victim->showFlyText("combat_effects", "choke", 0xFF, 0, 0);
 
@@ -193,6 +193,22 @@ uint32 DamageOverTime::doBleedingTick(CreatureObject* victim, CreatureObject* at
 
 	// absorption reduces the strength of a dot by the given %.
 	int damage = (int)(strength * (1.f - absorptionMod / 100.f));
+
+	if (victim->isPlayerCreature()) {
+		ManagedReference<PlayerObject*> victimPlayer = victim->getPlayerObject();
+		if (victimPlayer != nullptr) {
+			float kinRes = victimPlayer->getKineticResistance();
+			if (kinRes > 0)
+				damage *= kinRes;
+			float bleedRes = victimPlayer->getBleedResistance();
+			if (bleedRes > 0)
+				damage *= bleedRes;
+		}
+	}
+	else if (victim->isPet()) {
+		petResistReduction(victim, damage);
+	}
+
 	if (attr < damage) {
 		//System::out << "setting strength to " << attr -1 << endl;
 		damage = attr - 1;
@@ -228,6 +244,21 @@ uint32 DamageOverTime::doFireTick(CreatureObject* victim, CreatureObject* attack
 
 	// absorption reduces the strength of a dot by the given %.
 	int damage = (int)(strength * (1.f - absorptionMod / 100.f));
+	if (victim->isPlayerCreature()) {
+		ManagedReference<PlayerObject*> victimPlayer = victim->getPlayerObject();
+		if (victimPlayer != nullptr) {
+			float heatRes = victimPlayer->getHeatResistance();
+			if (heatRes > 0)
+				damage *= heatRes;
+			float fireRes = victimPlayer->getFireResistance();
+			if (fireRes > 0)
+				damage *= fireRes;
+		}
+	}
+	else if (victim->isPet()) {
+		petResistReduction(victim, damage);
+	}
+
 	if (attr < damage) {
 		//System::out << "setting strength to " << attr -1 << endl;
 		damage = attr - 1;
@@ -280,6 +311,22 @@ uint32 DamageOverTime::doPoisonTick(CreatureObject* victim, CreatureObject* atta
 
 	// absorption reduces the strength of a dot by the given %.
 	int damage = (int)(strength * (1.f - absorptionMod / 100.f));
+
+	if (victim->isPlayerCreature()) {
+		ManagedReference<PlayerObject*> victimPlayer = victim->getPlayerObject();
+		if (victimPlayer != nullptr) {
+			float acidRes = victimPlayer->getAcidResistance();
+			if (acidRes > 0)
+				damage *= acidRes;
+			float poisonRes = victimPlayer->getPoisonResistance();
+			if (poisonRes > 0)
+				damage *= poisonRes;
+		}
+	}
+	else if (victim->isPet()) {
+		petResistReduction(victim, damage);
+	}
+
 	if (attr < damage) {
 		//System::out << "setting strength to " << attr -1 << endl;
 		damage = attr - 1;
@@ -314,6 +361,22 @@ uint32 DamageOverTime::doDiseaseTick(CreatureObject* victim, CreatureObject* att
 	// absorption reduces the strength of a dot by the given %.
 	// make sure that the CM dots modify the strength
 	int damage = (int)(strength * (1.f - absorptionMod / 100.f) * (1.f + victim->getShockWounds() / 100.0f));
+
+	if (victim->isPlayerCreature()) {
+		ManagedReference<PlayerObject*> victimPlayer = victim->getPlayerObject();
+		if (victimPlayer != nullptr) {
+			float acidRes = victimPlayer->getAcidResistance();
+			if (acidRes > 0)
+				damage *= acidRes;
+			float diseaseRes = victimPlayer->getDiseaseResistance();
+			if (diseaseRes > 0)
+				damage *= diseaseRes;
+		}
+	}
+	else if (victim->isPet()) {
+		petResistReduction(victim, damage);
+	}
+	
 	int maxDamage = victim->getBaseHAM(attribute) - 1 - victim->getWounds(attribute);
 
 	damage = Math::min(damage, maxDamage);
@@ -357,13 +420,28 @@ uint32 DamageOverTime::doForceChokeTick(CreatureObject* victim, CreatureObject* 
 	auto attribute = this->attribute;
 	auto strength = this->strength;
 
+	if (victimRef->isPet()) {
+		petResistReduction(victimRef, strength);
+	}
+	else if (victimRef->isPlayerCreature()) {
+		ManagedReference<PlayerObject*> victimPlayer = victimRef->getPlayerObject();
+		if (victimPlayer != nullptr) {
+			float acidRes = victimPlayer->getLightsaberResistance();
+			if (acidRes > 0)
+				strength *= acidRes;
+			float diseaseRes = victimPlayer->getChokeResistance();
+			if (diseaseRes > 0)
+				strength *= diseaseRes;
+		}
+	}
+
 	Core::getTaskManager()->executeTask([victimRef, attackerRef, attribute, strength] () {
 		Locker locker(victimRef);
 
 		Locker crossLocker(attackerRef, victimRef);
 
 		uint32 chokeDam = strength;
-
+		
 		float jediBuffDamage = 0;
 		float rawDamage = chokeDam;
 
@@ -374,7 +452,6 @@ uint32 DamageOverTime::doForceChokeTick(CreatureObject* victim, CreatureObject* 
 			victimRef->notifyObservers(ObserverEventType::FORCESHIELD, attackerRef, jediBuffDamage);
 			CombatManager::instance()->sendMitigationCombatSpam(victimRef, nullptr, (int)jediBuffDamage, CombatManager::FORCESHIELD);
 		}
-
 		// //PSG with lightsaber resistance only
 		// ManagedReference<ArmorObject*> psg = CombatManager::instance()->getPSGArmor(victimRef);
 		// if (psg != nullptr && !psg->isVulnerable(SharedWeaponObjectTemplate::LIGHTSABER)) {
@@ -423,4 +500,14 @@ void DamageOverTime::multiplyDuration(float multiplier) {
 	newTime.addMiliTime(timeToAdd);
 	expires = newTime;
 
+}
+
+void DamageOverTime::petResistReduction(CreatureObject* pet, int damage) {
+	ManagedReference<CreatureObject*> petMasterA = pet->getLinkedCreature().get();
+	if (petMasterA != nullptr) {
+		int res = petMasterA->getSkillMod("pet_dot_resistance");
+		if (res > 0) {
+			damage *= (1 + res / 100.f);
+		}
+	}	
 }

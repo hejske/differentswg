@@ -325,53 +325,68 @@ class PlayerObject extends IntangibleObject {
 	protected int statsSkillPoints;
 	protected int socialSkillPoints;
 	
-	protected float kineticResist;
-	protected float blastResist;
-	protected float acidResist;
-	protected float heatResist;
-	protected float electricityResist;
-	protected float lightsaberResist;
-	protected float stunResist;
-	protected float energyResist;
-	protected float coldResist;
+	// protected float kineticResist;
+	// protected float blastResist;
+	// protected float acidResist;
+	// protected float heatResist;
+	// protected float electricityResist;
+	// protected float lightsaberResist;
+	// protected float stunResist;
+	// protected float energyResist;
+	// protected float coldResist;
 
-	protected float blockChance;
-	protected float saberBlockChance;
-	protected float counterAttackChance;
-	protected float dodgeChance;
-	protected float toughness;
-	protected float meleeDefenseChance;
-	protected float rangedDefenseChance;
+	@dereferenced
+	protected Vector<float> resistances;
 
-	protected float bleedResist;
-	protected float diseaseResist;
-	protected float fireResist;
-	protected float chokeResist;
-	protected float poisonResist;
+	// protected float blockChance;
+	// protected float saberBlockChance;
+	// protected float counterAttackChance;
+	// protected float dodgeChance;
+	// protected float toughness;
+	// protected float meleeDefenseChance;
+	// protected float rangedDefenseChance;
+
+	@dereferenced
+	protected Vector<float> secondaryDefenses;
+
+	// protected float bleedResist;
+	// protected float diseaseResist;
+	// protected float fireResist;
+	// protected float chokeResist;
+	// protected float poisonResist;
+
+	@dereferenced
+	protected Vector<float> dotResistances;
+
+	// @dereferenced
+	// protected Vector<float> stateDefenses;
 
 	public PlayerObject() {
 		
-		bleedResist = 0;
-		diseaseResist = 0;
-		fireResist = 0;
-		chokeResist = 0;
-		poisonResist = 0;
-		meleeDefenseChance = 0;
-		rangedDefenseChance = 0;
-		blockChance = 0;
-		saberBlockChance = 0;
-		counterAttackChance = 0;
-		dodgeChance = 0;
-		toughness = 0;
-		kineticResist = 0;
-		blastResist = 0;
-		acidResist = 0;
-		electricityResist = 0;
-		heatResist = 0;
-		lightsaberResist = 0;
-		stunResist = 0;
-		energyResist = 0;
-		coldResist = 0;
+		// bleedResist = 0;
+		// diseaseResist = 0;
+		// fireResist = 0;
+		// chokeResist = 0;
+		// poisonResist = 0;
+		// meleeDefenseChance = 0;
+		// rangedDefenseChance = 0;
+		// blockChance = 0;
+		// saberBlockChance = 0;
+		// counterAttackChance = 0;
+		// dodgeChance = 0;
+		// toughness = 0;
+		// kineticResist = 0;
+		// blastResist = 0;
+		// acidResist = 0;
+		// electricityResist = 0;
+		// heatResist = 0;
+		// lightsaberResist = 0;
+		// stunResist = 0;
+		// energyResist = 0;
+		// coldResist = 0;
+		//dizzy, stun, blind, intim,kd, pcd, pcu
+		//stateDefenses = {0,0,0,0,0,0,0};
+
 
 		abilitySkillPoints = 100;
 		socialSkillPoints = 100;
@@ -469,11 +484,15 @@ class PlayerObject extends IntangibleObject {
 		miliSecsPlayed = 0;
 
 		Logger.setLoggingName("PlayerObjectBase");
+
+		initializeKaareMembers();
 	}
 
 	public void finalize() {
 
 	}
+
+	public native void initializeKaareMembers();
 
 	@dirty
 	@nativeStub
@@ -2114,186 +2133,248 @@ class PlayerObject extends IntangibleObject {
 
 		pvpRating = rating;
 	}
-
+//"kinetic", "blast", "acid", "cold", "stun", "lightsaber", "heat", "electricity", "energy"
 	@prelocked
 	public native void updateResists();
 
 	public native void setEnergyResistance(float val) {
-		energyResist = val;
+		resistances.get(8) = val;
 	}
 
 	@read
 	public native float getEnergyResistance() {
-		return energyResist;
+		return resistances.get(8);
 	}
 
 	public native void setKineticResistance(float val) {
-		kineticResist = val;
+		resistances.get(0) = val;
 	}
 
 	@read
 	public native float getKineticResistance() {
-		return kineticResist;
+		return resistances.get(0);
 	}
 
 	public native void setBlastResistance(float val) {
-		blastResist = val;
+		resistances.get(1) = val;
 	}
 
 	@read
 	public native float getBlastResistance() {
-		return blastResist;
+		return resistances.get(1);
 	}
 
 	public native void setStunResistance(float val) {
-		stunResist = val;
+		resistances.get(4) = val;
 	}
 
 	@read
 	public native float getStunResistance() {
-		return stunResist;
+		return resistances.get(4);
 	}
 
 	public native void setLightsaberResistance(float val) {
-		lightsaberResist = val;
+		resistances.get(5) = val;
 	}
 
 	@read
 	public native float getLightsaberResistance() {
-		return lightsaberResist;
+		return resistances.get(5);
 	}
 
 	public native void setHeatResistance(float val) {
-		heatResist = val;
+		resistances.get(6) = val;
 	}
 
 	@read
 	public native float getHeatResistance() {
-		return heatResist;
+		return resistances.get(6);
 	}
 
 	public native void setAcidResistance(float val) {
-		acidResist = val;
+		resistances.get(2) = val;
 	}
 
 	@read
 	public native float getAcidResistance() {
-		return acidResist;
+		return resistances.get(2);
 	}
 
 	public native void setElectricityResistance(float val) {
-		electricityResist = val;
+		resistances.get(7) = val;
 	}
 
 	@read
 	public native float getElectricityResistance() {
-		return electricityResist;
+		return resistances.get(7);
 	}
 
 	public native void setColdResistance(float val) {
-		coldResist = val;
+		resistances.get(3) = val;
 	}
 
 	@read
 	public native float getColdResistance() {
-		return coldResist;
+		return resistances.get(3);
 	}
 
 
 	public native void setBleedResistance(float val) {
-		bleedResist = val;
+		dotResistances.get(3) = val;
 	}
 
 	@read
 	public native float getBleedResistance() {
-		return bleedResist;
+		return dotResistances.get(3);
 	}
 
 
 	public native void setPoisonResistance(float val) {
-		poisonResist = val;
+		dotResistances.get(0) = val;
 	}
 
 	@read
 	public native float getPoisonResistance() {
-		return poisonResist;
+		return dotResistances.get(0);
 	}
 
 
 	public native void setDiseaseResistance(float val) {
-		diseaseResist = val;
+		dotResistances.get(2) = val;
 	}
 
 	@read
 	public native float getDiseaseResistance() {
-		return diseaseResist;
+		return dotResistances.get(2);
 	}
 
 
 	public native void setFireResistance(float val) {
-		fireResist = val;
+		dotResistances.get(1) = val;
 	}
 
 	@read
 	public native float getFireResistance() {
-		return fireResist;
+		return dotResistances.get(1);
 	}
 
 
 	public native void setChokeResistance(float val) {
-		chokeResist = val;
+		dotResistances.get(4) = val;
 	}
 
 	@read
 	public native float getChokeResistance() {
-		return chokeResist;
+		return dotResistances.get(4);
 	}
 
 	public native void setDodgeChance(float val) {
-		dodgeChance = val;
+		secondaryDefenses.get(0) = val;
 	}
 
 	@read 
 	public native float getDodgeChance() {
-		return dodgeChance;
+		return secondaryDefenses.get(0);
 	}
 
 	public native void setBlockChance(float val) {
-		blockChance = val;
+		secondaryDefenses.get(1) = val;
 	}
 
 	@read
 	public native float getBlockChance() {
-		return blockChance;
+		return secondaryDefenses.get(1);
 	}
 
 	public native void setCounterAttackChance(float val) {
-		counterAttackChance = val;
+		secondaryDefenses.get(2) = val;
 	}
 
 	@read
 	public float getCounterAttackChance() {
-		return counterAttackChance;
+		return secondaryDefenses.get(2);
 	}
 
 	public native void setSaberBlockChance(float val) {
-		saberBlockChance = val;
+		secondaryDefenses.get(3) = val;
 	}
 
 	@read
 	public float getSaberBlockChance() {
-		return saberBlockChance;
+		return secondaryDefenses.get(3);
 	}
 
 	public native void setToughness(float val) {
-		toughness = val;
+		secondaryDefenses.get(4) = val;
 	}
 
 	@read
 	public float getToughness() {
-		return toughness;
+		return secondaryDefenses.get(4);
 	}
 
+	// public native void setDizzyDefense(float val) {
+	// 	stateDefenses.get(0) = val;
+	// }
+
+	// @read
+	// public float getDizzyDefense() {
+	// 	return stateDefenses.get(0);
+	// }
+
+	// public native void setStunDefense(float val) {
+	// 	stateDefenses.get(1) = val;
+	// }
+
+	// @read
+	// public float getStunDefense() {
+	// 	return stateDefenses.get(1);
+	// }
+
+	// public native void setBlindDefense(float val)  {
+	// 	stateDefenses.get(2) = val;
+	// }
+
+	// @read
+	// public float getBlindDefense() {
+	// 	return stateDefenses.get(2);
+	// }
+
+	// public native void setIntimidateDefense(float val) {
+	// 	stateDefenses.get(3) = val;
+	// }
+
+	// @read
+	// public float getIntimidateDefense() {
+	// 	return stateDefenses.get(3);
+	// }
+
+	// public native void setKnockdownDefense(float val) {
+	// 	stateDefenses.get(4) = val;
+	// }
+
+	// @read
+	// public float getKnockdownDefense() {
+	// 	return stateDefenses.get(4);
+	// }
+
+	// public native void setPostureChangeDownDefense(float val) {
+	// 	stateDefenses.get(5) = val;
+	// }
+
+	// @read
+	// public float getPostureChangeDownDefense() {
+	// 	return stateDefenses.get(5);
+	// }
+
+	// public native void setPostureChangeUpDefense(float val) {
+	// 	stateDefenses.get(6) = val;
+	// }
+
+	// @read
+	// public float getPostureChangeUpDefense() {
+	// 	return stateDefenses.get(6);
+	// }
 	// public native void setMeleeDefenseChance(float val) {
 	// 	meleeDefenseChance = val;
 	// }
@@ -2311,11 +2392,13 @@ class PlayerObject extends IntangibleObject {
 	// public float getRangedDefenseChance() {
 	// 	return rangedDefenseChance;
 	// }
-	
+	@prelocked
 	public native void updateSecondaryDefenseModifiers();
 
+	@prelocked
 	public native void updateStats();
-
+	
+	@prelocked
 	public native void updateDotResistances();
 
 	@read

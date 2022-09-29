@@ -156,6 +156,7 @@ public:
 		return secondaryStrength;
 	}
 
+	void petResistReduction(CreatureObject* pet, int damage);
 
 };
 

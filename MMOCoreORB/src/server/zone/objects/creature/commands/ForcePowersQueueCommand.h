@@ -114,13 +114,19 @@ public:
 	float getCommandDuration(CreatureObject *object, const UnicodeString& arguments) const {
 		float combatHaste = object->getSkillMod("combat_haste");
 		int forcePowersSpeed = object->getSkillMod("force_powers_speed");
+		int actionSpeed = object->getSkillMod("action_speed");
 		float realSpeed = speed;
 		if (forcePowersSpeed > 0)
 			realSpeed *= (1.f + forcePowersSpeed / 100.f);
+		if (actionSpeed > 0)
+			realSpeed *= (1.f + actionSpeed / 100.f);
 		if (combatHaste > 0)
-			return realSpeed * (1.f - (combatHaste / 100.f));
-		else
-			return realSpeed;
+			realSpeed *= (1.f - (combatHaste / 100.f));
+		
+		if (realSpeed < 1)
+			realSpeed = 1;
+
+		return realSpeed;
 	}
 
 	virtual bool isJediCombatQueueCommand() {

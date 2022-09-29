@@ -107,6 +107,17 @@ void PlayerObjectImplementation::initializeTransientMembers() {
 	sessionStatsTotalCredits = 0;
 	sessionStatsIPAddress = "";
 	miliSecsSession = 0;
+
+
+}
+//? O.O
+void PlayerObjectImplementation::initializeKaareMembers() {
+	//"kinetic", "blast", "acid", "cold", "stun", "lightsaber", "heat", "electricity", "energy"
+	resistances = {0,0,0,0,0,0,0,0,0};
+	//"poison", "fire", "disease", "bleed", "choke"
+	dotResistances = {0,0,0,0,0};
+	//dodge,block,counter,lsblock,toughness
+	secondaryDefenses = {0,0,0,0,0,0};
 }
 
 PlayerObject* PlayerObjectImplementation::asPlayerObject() {
@@ -3576,7 +3587,7 @@ void PlayerObjectImplementation::updateResists() {
 
 			modValue = ((modValue * cap) / (modValue + cap * factor));
 
-			resists.get(i-1) = modValue / 100.f;
+			resists.get(i-1) = 1 - modValue / 100.f;
 		}
 
 	}
@@ -3752,7 +3763,7 @@ void PlayerObjectImplementation::updateDotResistances() {
 			modValue /= 5;
 			modValue = ((modValue * cap) / (modValue + cap * factor));
 
-			resists.get(i-1) = modValue / 100.f;
+			resists.get(i-1) = 1 - modValue / 100.f;
 		}
 	}
 
@@ -3764,6 +3775,17 @@ void PlayerObjectImplementation::updateDotResistances() {
 
 }
 
+// void PlayerObjectImplementation::updateStateDefenses() {
+// 	float dizzy = 0;
+// 	float blind = 0;
+// 	float stun = 0;
+// 	float intim = 0;
+// 	float pcd = 0;
+// 	float pcu = 0;
+// 	float kd = 0;
+
+// 	bool wearingAmor = asCreatureObject->isWearingArmor();
+// }
 // void PlayerObjectImplementation::updatePrimaryDefenses() {
 // 	auto player = asPlayerObject();
 
@@ -3804,8 +3826,8 @@ void PlayerObjectImplementation::updateDotResistances() {
 // }
 
 void PlayerObjectImplementation::updateStats() {
-	updateSecondaryDefenseModifiers();
-	updateResists();
-	updateDotResistances();
+	// updateSecondaryDefenseModifiers();
+	// updateResists();
+	// updateDotResistances();
 	//updatePrimaryDefenses();
 }

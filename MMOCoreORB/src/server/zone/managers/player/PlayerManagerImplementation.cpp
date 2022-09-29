@@ -2211,31 +2211,64 @@ bool PlayerManagerImplementation::checkEncumbrancies(CreatureObject* player, Arm
 }
 
 void PlayerManagerImplementation::applyEncumbrancies(CreatureObject* player, ArmorObject* armor) {
-	int healthEncumb = Math::max(0, armor->getHealthEncumbrance());
-	int actionEncumb = Math::max(0, armor->getActionEncumbrance());
-	int mindEncumb = Math::max(0, armor->getMindEncumbrance());
+	// int healthEncumb = Math::max(0, armor->getHealthEncumbrance());
+	// int actionEncumb = Math::max(0, armor->getActionEncumbrance());
+	// int mindEncumb = Math::max(0, armor->getMindEncumbrance());
+
+	int healthEncumb = armor->getHealthEncumbrance();
+	int actionEncumb = armor->getActionEncumbrance();
+	int mindEncumb = armor->getMindEncumbrance();
+
 
 	player->addEncumbrance(CreatureEncumbrance::HEALTH, healthEncumb, true);
 	player->addEncumbrance(CreatureEncumbrance::ACTION, actionEncumb, true);
 	player->addEncumbrance(CreatureEncumbrance::MIND, mindEncumb, true);
 
-	player->inflictDamage(player, CreatureAttribute::STRENGTH, healthEncumb, true);
-	player->addMaxHAM(CreatureAttribute::STRENGTH, -healthEncumb, true);
 
-	player->inflictDamage(player, CreatureAttribute::CONSTITUTION, healthEncumb, true);
-	player->addMaxHAM(CreatureAttribute::CONSTITUTION, -healthEncumb, true);
+	player->addBonusMaxHAM(CreatureAttribute::STRENGTH, -healthEncumb, true);
+	player->addBonusMaxHAM(CreatureAttribute::CONSTITUTION, -healthEncumb, true);
 
-	player->inflictDamage(player, CreatureAttribute::QUICKNESS, actionEncumb, true);
-	player->addMaxHAM(CreatureAttribute::QUICKNESS, -actionEncumb, true);
+	if (healthEncumb > 0) {
+		player->inflictDamage(player, CreatureAttribute::CONSTITUTION, healthEncumb, true);
+		player->inflictDamage(player, CreatureAttribute::STRENGTH, healthEncumb, true);
+	}
 
-	player->inflictDamage(player, CreatureAttribute::STAMINA, actionEncumb, true);
-	player->addMaxHAM(CreatureAttribute::STAMINA, -actionEncumb, true);
+	player->addBonusMaxHAM(CreatureAttribute::QUICKNESS, -actionEncumb, true);
+	player->addBonusMaxHAM(CreatureAttribute::STAMINA, -actionEncumb, true);
 
-	player->inflictDamage(player, CreatureAttribute::FOCUS, mindEncumb, true);
-	player->addMaxHAM(CreatureAttribute::FOCUS, -mindEncumb, true);
+	if (actionEncumb > 0) {
+		player->inflictDamage(player, CreatureAttribute::STAMINA, actionEncumb, true);
+		player->inflictDamage(player, CreatureAttribute::QUICKNESS, actionEncumb, true);
+	}
 
-	player->inflictDamage(player, CreatureAttribute::WILLPOWER, mindEncumb, true);
-	player->addMaxHAM(CreatureAttribute::WILLPOWER, -mindEncumb, true);
+	player->addBonusMaxHAM(CreatureAttribute::FOCUS, -mindEncumb, true);
+	player->addBonusMaxHAM(CreatureAttribute::WILLPOWER, -mindEncumb, true);
+
+	if (mindEncumb > 0) {
+		player->inflictDamage(player, CreatureAttribute::WILLPOWER, mindEncumb, true);
+		player->inflictDamage(player, CreatureAttribute::FOCUS, mindEncumb, true);
+	}
+	// player->addEncumbrance(CreatureEncumbrance::HEALTH, healthEncumb, true);
+	// player->addEncumbrance(CreatureEncumbrance::ACTION, actionEncumb, true);
+	// player->addEncumbrance(CreatureEncumbrance::MIND, mindEncumb, true);
+
+	// player->inflictDamage(player, CreatureAttribute::STRENGTH, healthEncumb, true);
+	// player->addMaxHAM(CreatureAttribute::STRENGTH, -healthEncumb, true);
+
+	// player->inflictDamage(player, CreatureAttribute::CONSTITUTION, healthEncumb, true);
+	// player->addMaxHAM(CreatureAttribute::CONSTITUTION, -healthEncumb, true);
+
+	// player->inflictDamage(player, CreatureAttribute::QUICKNESS, actionEncumb, true);
+	// player->addMaxHAM(CreatureAttribute::QUICKNESS, -actionEncumb, true);
+
+	// player->inflictDamage(player, CreatureAttribute::STAMINA, actionEncumb, true);
+	// player->addMaxHAM(CreatureAttribute::STAMINA, -actionEncumb, true);
+
+	// player->inflictDamage(player, CreatureAttribute::FOCUS, mindEncumb, true);
+	// player->addMaxHAM(CreatureAttribute::FOCUS, -mindEncumb, true);
+
+	// player->inflictDamage(player, CreatureAttribute::WILLPOWER, mindEncumb, true);
+	// player->addMaxHAM(CreatureAttribute::WILLPOWER, -mindEncumb, true);
 }
 
 void PlayerManagerImplementation::removeEncumbrancies(CreatureObject* player, ArmorObject* armor) {
@@ -4538,14 +4571,27 @@ void PlayerManagerImplementation::fixHAM(CreatureObject* player) {
 		}
 
 		int encumbranceType = -1;
-	
-		int hamMod = 0;
-		int increaseHamMod = 0;
 
 		for (int i = 0; i < 9; ++i) {
 			int maxModifier = attributeValues.get((byte)i);
 			int baseHam = player->getBaseHAM(i);
+			int bonusHam = player->getBonusMaxHAM(i);
 			int max = player->getMaxHAM(i);
+
+			if (bonusHam > 0)
+				baseHam += bonusHam;
+
+			Vector<String> attributeNames = {"health", "strength", "constitution", "action", "quickness", "stamina", "mind", "focus", "willpower"};
+
+			String inc = "increased_attribute_";
+
+			String attributeName = inc + attributeNames.get(i);
+
+			int mod = player->getSkillMod(attributeName);
+
+			if (mod > 0) {
+				baseHam *= (1 + mod / 100.f);
+			}
 
 			int calculated = baseHam + maxModifier;
 
@@ -4561,26 +4607,6 @@ void PlayerManagerImplementation::fixHAM(CreatureObject* player) {
 				if (player->getHAM(i) > calculated)
 					player->setHAM(i, calculated, false);
 
-				if (i == 0) {
-					hamMod = player->getSkillMod("health_mod");
-					increaseHamMod = player->getSkillMod("increased_health");
-					if (hamMod > 0)
-						calculated += hamMod;
-					
-					if (increaseHamMod > 0)
-						calculated *= (1 + increaseHamMod / 100.f);
-				}
-				else if (i == 6) {
-					hamMod = player->getSkillMod("mind_mod");
-					increaseHamMod = player->getSkillMod("increased_mind");
-					if (hamMod > 0)
-						calculated += hamMod;
-					
-					if (increaseHamMod > 0)
-						calculated *= (1 + increaseHamMod / 100.f);
-				}
-
-				player->setMaxHAM(i, calculated, false);
 			}
 		}
 	} catch (const Exception& e) {

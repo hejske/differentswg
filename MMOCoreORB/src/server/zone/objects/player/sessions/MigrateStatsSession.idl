@@ -62,32 +62,40 @@ class MigrateStatsSession extends Facade {
 	public void migrateStats() {
 		CreatureObject creo = creature;
 
+		// Vector<string> modNames = {"health","strength","constitution","action","quickness","stamina","mind","focus","willpower"};
+
+		// string inc = "increased_attribute_";
+
 		if (!creo) {
 			cancelSession();
 			return;
 		}
 
 		for (int i = 0; i < 9; i = i + 1) {
-			int newValue = attributesToModify.get(i);
-			int incMod = 0;
-			int realValue = newValue;
 
-			if (i == 0) {
-				incMod = creo.getSkillMod("increased_health");
-				if (incMod > 0)
-					realValue *= (1 + incMod / 100.f);
-			}
-			else if (i == 6) {
-				incMod = creo.getSkillMod("increased_mind");
-				if (incMod > 0)
-					realValue *= (1 + incMod / 100.f);
-			}
-			
+			int newValue = attributesToModify.get(i);
 			int originalAmount = creo.getBaseHAM(i);
-			
+
+			int diff = newValue - originalAmount;
+
 			creo.setBaseHAM(i, newValue);
-			creo.setHAM(i, creo.getHAM(i) + (realValue - originalAmount));
-			creo.setMaxHAM(i, creo.getMaxHAM(i) + (realValue - originalAmount));
+
+			creo.addBonusMaxHAM(i, diff, true, true);
+
+			//int originalMaxHam = creo.getMaxHAM(i);
+
+			// int incMod = 0;
+			// int realValue = newValue;
+			// string modName = inc + modNames.get(i);
+
+			// incMod = creo.getSkillMod(modName);
+			// if (incMod > 0)
+			// 	originalMaxHAM /= (1 + incMod / 100.f);
+
+		
+			// creo.setBaseHAM(i, newValue);
+			// creo.setHAM(i, creo.getHAM(i) + (realValue - originalAmount));
+			// creo.setMaxHAM(i, creo.getMaxHAM(i) + (realValue - originalAmount));
 			
 			//setAttributeBar(attribute, getAttribute(attribute) + (value - originalAmount));
 			//setMaxAttributeBar(attribute, getAttributeMax(attribute) + (value - originalAmount), updateClient);

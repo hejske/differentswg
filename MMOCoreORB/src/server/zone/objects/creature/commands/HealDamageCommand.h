@@ -30,11 +30,21 @@ public:
 	void deactivateInjuryTreatment(CreatureObject* creature, bool isRangedStim) const {
 		float modSkill = 0.0f;
 
-		if (isRangedStim)
-			modSkill = (float)creature->getSkillMod("healing_range_speed");
-		else
+		// if (isRangedStim)
+		// 	modSkill = (float)creature->getSkillMod("healing_range_speed");
+		// else
 			modSkill = (float)creature->getSkillMod("healing_injury_speed");
 
+		int actionSpeed = creature->getSkillMod("action_speed");
+
+		int healingSpeed = creature->getSkillMod("healing_speed");
+
+		if (actionSpeed > 0)
+			modSkill += actionSpeed;
+
+		if (healingSpeed > 0)
+			modSkill += healingSpeed;
+			
 		int delay = (int)round(20.0f - (modSkill / 5));
 
 		if (creature->hasBuff(BuffCRC::FOOD_HEAL_RECOVERY)) {
@@ -48,7 +58,8 @@ public:
 		}
 
 		//Force the delay to be at least 4 seconds.
-		delay = (delay < 4) ? 4 : delay;
+		//delay = (delay < 4) ? 4 : delay;
+		delay = (delay < 1) ? 1 : delay;
 
 		StringIdChatParameter message("healing_response", "healing_response_58"); //You are now ready to heal more damage.
 		Reference<InjuryTreatmentTask*> task = new InjuryTreatmentTask(creature, message, "injuryTreatment");
@@ -439,9 +450,10 @@ public:
 
 		if (stimPack->isRangedStimPack()) {
 			float packRange = (cast<RangedStimPack*>(stimPack.get()))->getRange();
-			float healRange = (float)(creature->getSkillMod("healing_range") / 100.0f) * 14;
+			//float healRange = (float)(creature->getSkillMod("healing_range") / 100.0f) * 14;
 
-			rangeToCheck = packRange + healRange;
+			//rangeToCheck = packRange + healRange;
+			rangeToCheck = packRange;
 		}
 
 		if(!checkDistance(creature, targetCreature, rangeToCheck))
