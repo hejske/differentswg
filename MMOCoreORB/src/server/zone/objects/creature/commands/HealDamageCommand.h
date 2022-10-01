@@ -134,8 +134,6 @@ public:
 			return false;
 		}
 
-		PlayerManager* playerManager = server->getPlayerManager();
-
 		if (creature != creatureTarget && !CollisionManager::checkLineOfSight(creature, creatureTarget)) {
 			return false;
 		}

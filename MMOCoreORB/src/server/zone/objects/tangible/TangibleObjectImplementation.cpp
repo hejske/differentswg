@@ -35,6 +35,7 @@
 #include "templates/faction/Factions.h"
 #include "server/zone/objects/player/FactionStatus.h"
 #include "server/chat/ChatManager.h"
+#include "server/zone/objects/tangible/wearables/WearableContainerObject.h"
 
 void TangibleObjectImplementation::initializeTransientMembers() {
 	SceneObjectImplementation::initializeTransientMembers();
@@ -293,11 +294,32 @@ void TangibleObjectImplementation::sendPvpStatusTo(CreatureObject* player) {
 			newPvpStatusBitmask &= ~CreatureFlag::TEF;
 	}
 
-	if (getFutureFactionStatus() == FactionStatus::OVERT)
+	int thisFactionStatus = getFactionStatus();
+	int thisFutureStatus = getFutureFactionStatus();
+
+	if (thisFutureStatus == FactionStatus::OVERT)
 		newPvpStatusBitmask |= CreatureFlag::WILLBEDECLARED;
 
-	if (getFactionStatus() == FactionStatus::OVERT && getFutureFactionStatus() == FactionStatus::COVERT)
+	if (thisFactionStatus == FactionStatus::OVERT && thisFutureStatus == FactionStatus::COVERT)
 		newPvpStatusBitmask |= CreatureFlag::WASDECLARED;
+
+	if (isAiAgent() && !isPet() && getFaction() > 0 && player->isPlayerCreature() && player->getFaction() > 0 && getFaction() != player->getFaction() && thisFactionStatus >= FactionStatus::COVERT) {
+		if (ConfigManager::instance()->useCovertOvertSystem()) {
+			PlayerObject* ghost = player->getPlayerObject();
+
+			if (player->getFactionStatus() == FactionStatus::OVERT || (ghost != nullptr && ghost->hasGcwTef())) {
+				newPvpStatusBitmask |= CreatureFlag::ENEMY;
+			} else if (newPvpStatusBitmask & CreatureFlag::ENEMY) {
+				newPvpStatusBitmask &= ~CreatureFlag::ENEMY;
+			}
+		} else {
+			if (player->getFactionStatus() >= FactionStatus::COVERT) {
+				newPvpStatusBitmask |= CreatureFlag::ENEMY;
+			} else if (newPvpStatusBitmask & CreatureFlag::ENEMY) {
+				newPvpStatusBitmask &= ~CreatureFlag::ENEMY;
+			}
+		}
+	}
 
 	BaseMessage* pvp = new UpdatePVPStatusMessage(asTangibleObject(), player, newPvpStatusBitmask);
 	player->sendMessage(pvp);
@@ -616,6 +638,25 @@ void TangibleObjectImplementation::fillAttributeList(AttributeListMessage* alm, 
 		alm->insertAttribute("contents", contentsString);
 	} else {
 		alm->insertAttribute("volume", volume);
+	}
+
+	if (isWearableObject() || isWearableContainerObject()) {
+		int remainingSockets = 0;
+
+		if (isWearableObject()) {
+			WearableObject* wearable = cast<WearableObject*>(asTangibleObject());
+
+			if (wearable != nullptr)
+				remainingSockets = wearable->getRemainingSockets();
+		} else {
+			WearableContainerObject* container = cast<WearableContainerObject*>(asTangibleObject());
+
+			if (container != nullptr)
+				remainingSockets = container->getRemainingSockets();
+		}
+
+		if (remainingSockets > 0)
+			alm->insertAttribute("sockets", remainingSockets);
 	}
 
 	if (!craftersName.isEmpty()) {

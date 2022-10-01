@@ -362,6 +362,8 @@ void CreatureObjectImplementation::sendBaselinesTo(SceneObject* player) {
 	if (player == thisPointer) {
 		CreatureObjectMessage4* msg4 = new CreatureObjectMessage4(thisPointer);
 		player->sendMessage(msg4);
+	} else if (isPlayerCreature()) {
+		sendSpeedAndAccelerationMods(player);
 	}
 
 	CreatureObjectMessage6* msg6 = new CreatureObjectMessage6(thisPointer);
@@ -1755,22 +1757,105 @@ void CreatureObjectImplementation::setPosture(int newPosture, bool immediate, bo
 	updatePostures(immediate);
 }
 
-void CreatureObjectImplementation::updateSpeedAndAccelerationMods() {
-	float speedboost = 0;
+float CreatureObjectImplementation::getSpeedModifier() const {
+	float modifier = 1.f;
 
-	if (posture == CreaturePosture::PRONE && !hasBuff(CreatureState::COVER)) {
-		speedboost = getSkillMod("slope_move") >= 50 ? ((getSkillMod("slope_move") - 50.0f) / 100.0f) / 2 : 0;
+	if (posture == CreaturePosture::UPRIGHT) {
+		if (getSkillMod("private_speed_multiplier") > 0) {
+			modifier = getSkillMod("private_speed_multiplier") * 0.01f;
+		}
+	} else if (posture == CreaturePosture::PRONE) {
+		if (getSkillMod("slope_move") > 50) {
+			modifier += (getSkillMod("slope_move") - 50) * 0.005f;
+		}
+
+		if (hasState(CreatureState::COVER)) {
+			modifier *= hasSkill("combat_rifleman_speed_03") ? 0.5f : 0.f;
+		}
 	}
 
-	setSpeedMultiplierMod(CreaturePosture::instance()->getMovementScale((uint8) posture) + speedboost, true);
+	return modifier;
+}
 
-	setAccelerationMultiplierMod(CreaturePosture::instance()->getAccelerationScale((uint8) posture), true);
+float CreatureObjectImplementation::getAccelerationModifier() const {
+	float modifier = 1.f;
 
-	setTurnScale(CreaturePosture::instance()->getTurnScale((uint8) posture), true);
+	if (posture == CreaturePosture::UPRIGHT) {
+		if (getSkillMod("private_acceleration_multiplier") > 0) {
+			modifier = getSkillMod("private_acceleration_multiplier") * 0.01f;
+		}
+	}
+
+	return modifier;
+}
+
+void CreatureObjectImplementation::sendSpeedAndAccelerationMods(SceneObject* player) {
+	auto dcreo4 = new CreatureObjectDeltaMessage4(asCreatureObject());
+
+	dcreo4->updateAccelerationMultiplierMod();
+	dcreo4->updateSpeedMultiplierMod();
+	dcreo4->updateTurnScale();
+	dcreo4->close();
+
+	player->sendMessage(dcreo4);
+}
+
+void CreatureObjectImplementation::updateSpeedAndAccelerationMods() {
+	auto creaturePosture = CreaturePosture::instance();
+
+	if (creaturePosture == nullptr) {
+		return;
+	}
+
+	float aScale = creaturePosture->getAccelerationScale(posture);
+	float mScale = creaturePosture->getMovementScale(posture);
+	float tScale = creaturePosture->getTurnScale(posture);
+
+	if (isPlayerCreature()) {
+		auto dcreo4 = new CreatureObjectDeltaMessage4(asCreatureObject());
+		int updateSize = 0;
+
+		aScale *= getAccelerationModifier();
+		mScale *= getSpeedModifier();
+
+		if (aScale == 0.f && mScale == 0.f) {
+			aScale = 0.1f;
+		}
+
+		if (accelerationMultiplierMod != aScale) {
+			setAccelerationMultiplierMod(aScale, false, false);
+			dcreo4->updateAccelerationMultiplierMod();
+			updateSize++;
+		}
+
+		if (speedMultiplierMod != mScale) {
+			setSpeedMultiplierMod(mScale, false, false);
+			dcreo4->updateSpeedMultiplierMod();
+			updateSize++;
+		}
+
+		if (turnScale != tScale) {
+			setTurnScale(tScale, false);
+			dcreo4->updateTurnScale();
+			updateSize++;
+		}
+
+		if (updateSize != 0) {
+			dcreo4->close();
+			broadcastMessage(dcreo4, true);
+		} else {
+			delete dcreo4;
+			dcreo4 = nullptr;
+		}
+	} else {
+		setAccelerationMultiplierMod(aScale, false, true);
+		setSpeedMultiplierMod(mScale, false, true);
+		setTurnScale(tScale, false);
+	}
 
 	// Terrain Negotiation.
 	updateSlopeMods(true);
-	updateWaterMod();
+	updateWaterMod(true);
 }
 
 float CreatureObjectImplementation::calculateSpeed() {
@@ -1851,16 +1936,12 @@ void CreatureObjectImplementation::setMood(byte mood, bool notifyClient) {
 	}
 }
 
-void CreatureObjectImplementation::setAccelerationMultiplierBase(
-		float newMultiplierBase, bool notifyClient) {
-	if (accelerationMultiplierBase == newMultiplierBase)
-		return;
-
-	accelerationMultiplierBase = newMultiplierBase;
+void CreatureObjectImplementation::setAccelerationMultiplierBase(float newMultiplierBase, bool notifyClient) {
+	if (accelerationMultiplierBase != newMultiplierBase)
+		accelerationMultiplierBase = newMultiplierBase;
 
 	if (notifyClient) {
-		CreatureObjectDeltaMessage4* dcreo4 = new CreatureObjectDeltaMessage4(
-				asCreatureObject());
+		CreatureObjectDeltaMessage4* dcreo4 = new CreatureObjectDeltaMessage4(asCreatureObject());
 		dcreo4->updateAccelerationMultiplierBase();
 		dcreo4->close();
 
@@ -1868,17 +1949,18 @@ void CreatureObjectImplementation::setAccelerationMultiplierBase(
 	}
 }
 
-void CreatureObjectImplementation::setAccelerationMultiplierMod(float newMultiplierMod, bool notifyClient) {
-	float buffMod = getSkillMod("private_acceleration_multiplier") > 0 ? (float)getSkillMod("private_acceleration_multiplier") / 100.f : 1.f;
+void CreatureObjectImplementation::setAccelerationMultiplierMod(float newMultiplierMod, bool notifyClient, bool recalculateBuffs) {
+	float newValue = newMultiplierMod;
 
-	if (accelerationMultiplierMod == newMultiplierMod * buffMod)
-		return;
+	if (recalculateBuffs) {
+		newValue *= getAccelerationModifier();
+	}
 
-	accelerationMultiplierMod = newMultiplierMod * buffMod;
+	if (accelerationMultiplierMod != newValue)
+		accelerationMultiplierMod = newValue;
 
 	if (notifyClient) {
-		CreatureObjectDeltaMessage4* dcreo4 = new CreatureObjectDeltaMessage4(
-				asCreatureObject());
+		CreatureObjectDeltaMessage4* dcreo4 = new CreatureObjectDeltaMessage4(asCreatureObject());
 		dcreo4->updateAccelerationMultiplierMod();
 		dcreo4->close();
 
@@ -1886,16 +1968,12 @@ void CreatureObjectImplementation::setAccelerationMultiplierMod(float newMultipl
 	}
 }
 
-void CreatureObjectImplementation::setSpeedMultiplierBase(
-		float newMultiplierBase, bool notifyClient) {
-	if (speedMultiplierBase == newMultiplierBase)
-		return;
-
-	speedMultiplierBase = newMultiplierBase;
+void CreatureObjectImplementation::setSpeedMultiplierBase(float newMultiplierBase, bool notifyClient) {
+	if (speedMultiplierBase != newMultiplierBase)
+		speedMultiplierBase = newMultiplierBase;
 
 	if (notifyClient) {
-		CreatureObjectDeltaMessage4* dcreo4 = new CreatureObjectDeltaMessage4(
-				asCreatureObject());
+		CreatureObjectDeltaMessage4* dcreo4 = new CreatureObjectDeltaMessage4(asCreatureObject());
 		dcreo4->updateSpeedMultiplierBase();
 		dcreo4->close();
 
@@ -1903,16 +1981,12 @@ void CreatureObjectImplementation::setSpeedMultiplierBase(
 	}
 }
 
-void CreatureObjectImplementation::setTurnScale(
-		float newMultiplierBase, bool notifyClient) {
-	if (turnScale == newMultiplierBase)
-		return;
-
-	turnScale = newMultiplierBase;
+void CreatureObjectImplementation::setTurnScale(float newMultiplierBase, bool notifyClient) {
+	if (turnScale != newMultiplierBase)
+		turnScale = newMultiplierBase;
 
 	if (notifyClient) {
-		CreatureObjectDeltaMessage4* dcreo4 = new CreatureObjectDeltaMessage4(
-				asCreatureObject());
+		CreatureObjectDeltaMessage4* dcreo4 = new CreatureObjectDeltaMessage4(asCreatureObject());
 		dcreo4->updateTurnScale();
 		dcreo4->close();
 
@@ -1948,35 +2022,25 @@ void CreatureObjectImplementation::setFactionRank(int rank, bool notifyClient) {
 	broadcastMessage(msg, true);
 }
 
-void CreatureObjectImplementation::setSpeedMultiplierMod(float newMultiplierMod, bool notifyClient) {
-	float buffMod = 1;
+void CreatureObjectImplementation::setSpeedMultiplierMod(float newMultiplierMod, bool notifyClient, bool recalculateBuffs) {
+	float newValue = newMultiplierMod;
 
-	if (posture == CreaturePosture::UPRIGHT) {
-		buffMod = getSkillMod("private_speed_multiplier") > 0 ? (float)getSkillMod("private_speed_multiplier") / 100.f : 1.f;
-	} else if(posture == CreaturePosture::PRONE && hasState(CreatureState::COVER)) {
-		if (hasSkill("combat_rifleman_speed_03")) {
-			buffMod = 0.5f;
-		} else {
-			buffMod = 0.f;
+	if (recalculateBuffs) {
+		newValue *= getSpeedModifier();
+	}
+
+	if (speedMultiplierMod != newValue) {
+		speedMultiplierMod = newValue;
+
+		if (speedMultiplierModChanges.size() > 5) {
+			speedMultiplierModChanges.remove(0);
 		}
+
+		speedMultiplierModChanges.add(SpeedModChange(speedMultiplierMod));
 	}
-
-	if (speedMultiplierMod == newMultiplierMod * buffMod)
-		return;
-
-	speedMultiplierMod = newMultiplierMod * buffMod;
-
-	int bufferSize = speedMultiplierModChanges.size();
-
-	if (bufferSize > 5) {
-		speedMultiplierModChanges.remove(0);
-	}
-
-	speedMultiplierModChanges.add(SpeedModChange(speedMultiplierMod));
 
 	if (notifyClient) {
-		CreatureObjectDeltaMessage4* dcreo4 = new CreatureObjectDeltaMessage4(
-				asCreatureObject());
+		CreatureObjectDeltaMessage4* dcreo4 = new CreatureObjectDeltaMessage4(asCreatureObject());
 		dcreo4->updateSpeedMultiplierMod();
 		dcreo4->close();
 
@@ -2570,10 +2634,8 @@ void CreatureObjectImplementation::setBerserkedState(uint32 duration) {
 		state->setStartFlyText("combat_effects", "go_berserk", 0, 0xFF, 0);
 		state->setEndFlyText("combat_effects", "no_berserk", 0xFF, 0, 0);
 
-		int mod = getSkillMod("berserk");
-
-		state->setSkillModifier("private_melee_accuracy_bonus", 20 + mod);
-		state->setSkillModifier("private_melee_damage_bonus", 75 + mod);
+		state->setSkillModifier("private_melee_accuracy_bonus", 20);
+		state->setSkillModifier("private_melee_damage_bonus", 75);
 		state->setSkillModifier("private_melee_defense", -60);
 		state->setSkillModifier("private_ranged_defense", -60);
 
@@ -3595,7 +3657,7 @@ bool CreatureObjectImplementation::isHealableBy(CreatureObject* healerCreo) {
 		auto linkedCreature = getLinkedCreature().get();
 
 		if (linkedCreature != nullptr) {
-			thisCreo = linkedCreature.get();
+			return linkedCreature->isHealableBy(healerCreo);
 		}
 	}
 
@@ -3624,8 +3686,6 @@ bool CreatureObjectImplementation::isHealableBy(CreatureObject* healerCreo) {
 	bool covertOvert =  ConfigManager::instance()->useCovertOvertSystem();
 
 	if (covertOvert) {
-
-
 		// Healer and thisCreature are different Factions/neutral and this creature is overt or has GCW Tef
 		if (thisFaction != healerFaction && (thisFactionStatus == FactionStatus::OVERT || (thisGhost != nullptr && thisGhost->hasGcwTef())))
 			return false;

@@ -3758,8 +3758,12 @@ bool AiAgentImplementation::isAttackableBy(TangibleObject* object) {
 	uint32 thisFaction = getFaction();
 	uint32 tanoFaction = object->getFaction();
 
-	if (thisFaction != 0 && tanoFaction != 0) {
+	if (thisFaction != 0 || tanoFaction != 0) {
 		if (thisFaction == tanoFaction) {
+			return false;
+		}
+
+		if (thisFaction == 0 && tanoFaction != 0) {
 			return false;
 		}
 	}
