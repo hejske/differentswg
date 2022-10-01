@@ -72,46 +72,51 @@ utilityMod = 5
 baseCrit = 10
 increasedCritChanceAll = baseCrit
 increasedCritChanceAllWeapon = baseCrit * 3
-increasedCritChanceSpecific = baseCrit * 1.5 --weapon and healing
-increasedCritChanceSpecificWeapon = baseCrit * 5
+increasedCritChanceSpecific = increasedCritChanceAll * 2 --weapon and healing
+increasedCritChanceSpecificWeapon = increasedCritChanceSpecific * 3
 increasedCritDamageAll = baseCrit
-increasedCritDamageAllWeapon = baseCrit * 3
-increasedCritDamageSpecific = baseCrit * 1.5 --weapon and healing NEEDS NEW NAME I GUESS critical multiplier?
-increasedCritDamageSpecificWeapon = baseCrit * 5
+increasedCritDamageAllWeapon = increasedCritDamageAll * 3
+increasedCritDamageSpecific = increasedCritDamageAll * 2 --weapon and healing NEEDS NEW NAME I GUESS critical multiplier?
+increasedCritDamageSpecificWeapon = increasedCritDamageSpecific * 3
 --damage
 baseDamage = 10
 powersDamage = baseDamage * 100
-powersDamageWeapon = baseDamage * 500
-increasedDamageAll = baseDamage * 10
-increasedDamageAllWeapon = baseDamage * 35
-increasedDamageSpecific = baseDamage * 15
-increasedDamageSpecificWeapon = baseDamage * 50
-increasedPetDamage = baseDamage * 20 --yes
-increasedPetDamageWeapon = baseDamage * 60 --yes
+powersDamageWeapon = powersDamage * 3
+increasedDamageAll = baseDamage * 5
+increasedDamageAllWeapon = increasedDamageAll * 3
+increasedDamageSpecific = increasedDamageAll * 2
+increasedDamageSpecificWeapon = increasedDamageSpecific * 3
+increasedPetDamage = increasedDamageAll * 2 --yes
+increasedPetDamageWeapon = increasedPetDamage * 3 --yes
+--armorPen
+baseAp = 15
+increasedArmorPenetration = baseAp
 --healing
 baseHealing = 10
-jediHealingPower = baseHealing * 200
-jediHealingPowerWeapon = baseHealing * 1000
-increasedHealingAll = baseHealing * 10
-increasedHealingAllWeapon = baseHealing * 35
-increasedHealingSpecific = baseHealing * 15
-increasedHealingSpecificWeapon = baseHealing * 50
+jediHealingPower = baseHealing * 100
+jediHealingPowerWeapon = jediHealingPower * 3
+increasedHealingAll = baseHealing * 5
+increasedHealingAllWeapon = increasedHealingAll * 3
+increasedHealingSpecific = increasedHealingAll * 2
+increasedHealingSpecificWeapon = increasedHealingSpecific * 3
 --regen?
 baseRegen = 1
 increasedHealthRegen = baseRegen * 20 
-increasedHealthRegenWeapon = baseRegen * 50
-increasedMindRegen = baseRegen * 10--yes
-increasedMindRegenWeapon = baseRegen * 30
+increasedHealthRegenWeapon = increasedHealthRegen * 3
+increasedMindRegen = increasedHealthRegen / 2--yes
+increasedMindRegenWeapon = increasedMindRegen * 3
 flatHealthRegen = baseRegen * 50
-flatMindRegen = baseRegen * 25
+flatHealtRegenWeapon = flatHealthRegen * 3
+flatMindRegen = flatHealthRegen / 2
+flatMindRegenWeapon = flatMindRegen * 3
 --speed
 speedSpecific = 30 --yes
-speedSpecificWeapon = 50 
+speedSpecificWeapon = speedSpecific * 3 
 speedType = 20
 speedAll = 15
 --ch
 increasedPetLife = 40 --no
-increasedPetLifeWeapon = 120 --no
+increasedPetLifeWeapon = increasedPetLife * 3 --no
 petToughness = 12 -- yes
 --resi & toughness
 toughness = 12 -- yes
@@ -181,7 +186,7 @@ lootableClothingStatModsValues = {
 {"max_attribute_health", primaryAttributeHealth},
 {"max_attribute_strength", secondaryAttribute},
 {"max_attribute_constitution", secondaryAttribute},
-{"max_attribute_action", primaryAttributeAction},
+--{"max_attribute_action", primaryAttributeAction},
 {"max_attribute_quickness", secondaryAttribute},
 {"max_attribute_stamina", secondaryAttribute},
 {"max_attribute_mind", primaryAttributeMind},
@@ -332,6 +337,7 @@ lootableClothingStatModsValues = {
 {"posture_change_up_defense", stateDef},
 {"stun_defense", stateDef},
 {"jedi_state_defense",jediStateDef},
+}
 
 
 --{"combat_healing_ability",
@@ -434,7 +440,8 @@ lootableClothingStatModsValues = {
 	-- {"thrown_speed", 5},
 	-- {"volley", 5},
 	-- {"warcry", 5},
-}
+--}
+
 -- lootableArmorAttachmentStatMods = {
 -- 	"aim",
 -- 	"alert",
@@ -735,8 +742,9 @@ lootableClothingStatModsValues = {
 -- 	"weapon_repair"
 -- }
 
--- lootableClothingStatMods = {
--- 	"aim",
+lootableClothingStatMods = {
+"aim",
+}
 -- 	"alert",
 -- 	"armor_assembly",
 -- 	"armor_experimentation",
@@ -2072,7 +2080,7 @@ lootableArmorStatModsValues = {
 
 
 
-lootableClothingStatMods = {
+lootableClothingStatModsTest = {
 	"unarmed_passive_defense",
 	"airstrike_damage",
 	"dart_effectiveness",

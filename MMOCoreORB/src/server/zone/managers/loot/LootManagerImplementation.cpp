@@ -318,11 +318,16 @@ int LootManagerImplementation::calculateLootCredits(int level) {
 TangibleObject* LootManagerImplementation::createLootObject(const LootItemTemplate* templateObject, int level, bool maxCondition) {
 	int uncappedLevel = level;
 
+	StringBuffer buffer;
+	buffer << level;
+
+	error(buffer.toString());
+
 	if(level < 1)
 		level = 1;
 
-	// if(level > 300)
-	// 	level = 300;
+	if(level > 400)
+		level = 400;
 
 	const String& directTemplateObject = templateObject->getDirectObjectTemplate();
 
@@ -581,7 +586,7 @@ void LootManagerImplementation::setSkillMods(TangibleObject* object, const LootI
 	bool yellow = false;
 	float modSqr = excMod * excMod;
 
-	if (System::random(skillModChance / modSqr) == 0) {
+	//if (System::random(skillModChance / modSqr) == 0) {
 		// if it has a skillmod the name will be yellow
 		yellow = true;
 		//int modCount = 1;
@@ -604,6 +609,7 @@ void LootManagerImplementation::setSkillMods(TangibleObject* object, const LootI
 			VectorMap<String, int> table = getSkillModTable(object->getGameObjectType());
 
 			if (table.size() > 0) {
+
 				int roll = System::random(table.size()) - 1;
 				modName = table.elementAt(roll).getKey();
 				//int modValue = table.get(roll).getValue();
@@ -632,8 +638,11 @@ void LootManagerImplementation::setSkillMods(TangibleObject* object, const LootI
 					}
 				}
 
-				int maxModValue = table.elementAt(newRoll).getValue();
-				int minMaxModValue = maxModValue / 4.f;
+				if (newRoll != 0)
+					roll = newRoll;
+
+				int maxModValue = table.elementAt(roll).getValue();
+				int minMaxModValue = maxModValue / 6.f;
 				int minModValue = 1;
 
 				int actualMaxValue = level / 400.f * maxModValue;
@@ -646,6 +655,10 @@ void LootManagerImplementation::setSkillMods(TangibleObject* object, const LootI
 
 				int actualModValue = System::random(actualMaxValue);
 
+				StringBuffer buff;
+				buff << "tableMax: " << maxModValue << "actualmax " << actualMaxValue << " actual " << actualModValue;
+				error(buff.toString());
+				
 				if (actualModValue < minModValue) {
 					actualModValue = minModValue;
 				}
@@ -665,7 +678,7 @@ void LootManagerImplementation::setSkillMods(TangibleObject* object, const LootI
 			// if( !modName.isEmpty() )
 			// 	additionalMods.put(modName, mod);
 		}
-	}
+	//}
 
 	if (object->isWearableObject() || object->isWeaponObject()) {
 		ManagedReference<TangibleObject*> item = cast<TangibleObject*>(object);
