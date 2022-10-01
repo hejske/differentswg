@@ -3531,6 +3531,11 @@ void PlayerObjectImplementation::updateResists() {
 
 	auto playerCreo = player->asCreatureObject();
 
+	if (playerCreo == nullptr)
+		return;
+
+	Locker lock(player);
+
 	float kin = 0;
 	float blast = 0;
 	float acid = 0;
@@ -3610,10 +3615,16 @@ void PlayerObjectImplementation::updateSecondaryDefenseModifiers() {
 	auto player = asPlayerObject();
 
 	if (player == nullptr)
-	return;
+		return;
+
 	auto playerCreo = asCreatureObject();
 
-	ManagedReference<WeaponObject*> weapon = player->asCreatureObject()->getWeapon();
+	if (playerCreo == nullptr)
+		return;
+
+	Locker lock(player);
+
+	ManagedReference<WeaponObject*> weapon = playerCreo->getWeapon();
 	
 	int cap = 0;
 	float factor = 0;
@@ -3726,8 +3737,15 @@ void PlayerObjectImplementation::updateDotResistances() {
 	if (player == nullptr)
 	return;
 
+	//Locker lock(player);
+
 	auto playerCreo = player->asCreatureObject();
 
+	if (playerCreo == nullptr)
+		return;
+
+	Locker lock(player);
+	
 	float poison = 0;
 	float fire = 0;
 	float disease = 0;
@@ -3826,8 +3844,20 @@ void PlayerObjectImplementation::updateDotResistances() {
 // }
 
 void PlayerObjectImplementation::updateStats() {
-	// updateSecondaryDefenseModifiers();
-	// updateResists();
-	// updateDotResistances();
+	
+	// auto player = asPlayerObject();
+
+	// if (player == nullptr)
+	// return;
+
+	// Locker lock(player);
+
+	// player->updateSecondaryDefenseModifiers();
+	// player->updateResists();
+	// player->updateDotResistances();
+
+	updateSecondaryDefenseModifiers();
+	updateResists();
+	updateDotResistances();
 	//updatePrimaryDefenses();
 }

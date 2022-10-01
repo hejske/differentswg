@@ -45,6 +45,7 @@ import system.util.SynchronizedVectorMap;
 import server.zone.managers.auction.AuctionSearchTask;
 import server.zone.objects.tangible.Instrument;
 include server.zone.objects.creature.CommandQueue;
+import system.util.Vector;
 
 @mock
 @json
@@ -135,7 +136,7 @@ class CreatureObject extends TangibleObject {
 	protected DeltaVector<int> maxHamList;
 
 	@dereferenced
-	protected DeltaVector<int> bonusMaxHamList;
+	protected Vector<int> bonusMaxHamList;
 
 	protected byte frozen;
 
@@ -2310,11 +2311,12 @@ class CreatureObject extends TangibleObject {
 		bonusMaxHamList.get(type) = value;
 	}
 
-	@local
-	@read
-	public final DeltaVector<int> getBonusMaxHAM() {
-		return bonusMaxHamList;
-	}
+	// @local
+	// @read
+	// @dereferenced
+	// public Vector<int> getBonusMaxHAMList() {
+	// 	return bonusMaxHamList;
+	// }
 
 	@preLocked
 	public native void addBonusMaxHAM(int type, int value, boolean notifyClient = true, boolean base = false);

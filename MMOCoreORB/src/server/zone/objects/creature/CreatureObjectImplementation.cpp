@@ -179,6 +179,8 @@ void CreatureObjectImplementation::initializeMembers() {
 	setContainerInheritPermissionsFromParent(false);
 	setContainerDefaultDenyPermission(ContainerPermissions::MOVECONTAINER);
 	setContainerDenyPermission("owner", ContainerPermissions::MOVECONTAINER);
+
+	bonusMaxHamList = {0,0,0,0,0,0,0,0,0};
 }
 
 void CreatureObjectImplementation::loadTemplateData(
@@ -1309,7 +1311,7 @@ void CreatureObjectImplementation::setMaxHAM(int type, int value,
 		setWounds(type, wounds.get(type), notifyClient);
 
 	if (type % 3 != 0) { //changing secondary stats, updating current value
-		healDamage(asCreatureObject(), type, value - hamList.get(type), notifyClient);
+		healDamageAll(asCreatureObject(), type, value - hamList.get(type), notifyClient);
 	}
 }
 
@@ -1379,17 +1381,17 @@ void CreatureObjectImplementation::addBonusMaxHAM(int type, int value, bool noti
 		value *= (1 + mod / 100.f);
 	}
 
-	int currentValue = maxHamList.get(type);
-	int newValue = currentValue + value;
+	// int currentValue = maxHamList.get(type);
+	// int newValue = currentValue + value;
 
-	addMaxHAM(type, newValue, notifyClient);
+	addMaxHAM(type, value, notifyClient);
 
 }
 
 void CreatureObjectImplementation::addIncreasedHAM(int type, int value, bool notifyClient) {
 	
 	if (type < 0 || type > bonusMaxHamList.size()) {
-		error("invalid type in CreatureObjectImplementation::addBonusMaxHAM");
+		error("invalid type in CreatureObjectImplementation::addIncreasedHAM");
 		return;
 	}
 
@@ -1398,12 +1400,17 @@ void CreatureObjectImplementation::addIncreasedHAM(int type, int value, bool not
 
 	int ham = bonusMaxHamList.get(type) + baseHAM.get(type);
 
-	ham *= (1 + value / 100.f);
+	StringBuffer buff;
 
-	int currentValue = maxHamList.get(type);
-	int newValue = currentValue + ham;
+	int newHam = ham * (1 + value / 100.f) - ham;
 
-	setMaxHAM(type, newValue, notifyClient);
+	buff << "ham: " << ham << " newHam: " << newHam;
+	error(buff.toString());
+
+	// int currentValue = maxHamList.get(type);
+	// int newValue = currentValue + ham;
+
+	addMaxHAM(type, newHam, notifyClient);
 }
 
 void CreatureObjectImplementation::addEncumbrance(int type, int value,
@@ -1601,9 +1608,12 @@ void CreatureObjectImplementation::checkForSpecialMods(String& modName, int valu
 			String inc = "increased_attribute_";
 			for (int i = 0; i < attributeNames.size(); ++i) {
 
-				String attributeName = inc + attributeNames.get(i-1);
+				String attributeName = inc + attributeNames.get(i);
 				if (modName == attributeName) {
-					addIncreasedHAM(i-1, value, true);
+					StringBuffer buff;
+					buff << "i: " << i << " value: " << value;
+					error(buff.toString());
+					addIncreasedHAM(i, value, true);
 					break;
 				}
 			}
@@ -1612,9 +1622,9 @@ void CreatureObjectImplementation::checkForSpecialMods(String& modName, int valu
 			String inc = "max_attribute_";
 			for (int i = 0; i < attributeNames.size(); ++i) {
 
-				String attributeName = inc + attributeNames.get(i-1);
+				String attributeName = inc + attributeNames.get(i);
 				if (modName == attributeName) {
-					addBonusMaxHAM(i-1, value, true);
+					addBonusMaxHAM(i, value, true);
 					break;
 				}
 			}
@@ -2257,7 +2267,7 @@ void CreatureObjectImplementation::notifyLoadFromDatabase() {
 
 	skillManager->updateXpLimits(ghost);
 
-	ghost->updateStats();
+	//ghost->updateStats();
 
 	if (getZone() != nullptr)
 		ghost->setLinkDead();

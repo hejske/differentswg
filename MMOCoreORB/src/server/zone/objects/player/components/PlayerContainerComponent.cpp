@@ -156,19 +156,20 @@ int PlayerContainerComponent::notifyObjectInserted(SceneObject* sceneObject, Sce
 	// Jedi stuff below.
 	PlayerObject* ghost = creo->getPlayerObject();
 
-	if (ghost && ghost->isJedi()) {
+	if (ghost != nullptr) {// && ghost->isJedi()) {
 
-		if (object->isRobeObject()) {
+		//if (object->isRobeObject()) {
 			ghost->recalculateForcePower();
-		} else if (object->isWeaponObject()) {
+			ghost->updateStats();
+
+		//} else if (object->isWeaponObject()) {
+		if (object->isWeaponObject()) {
 			WeaponObject* weaponObject = cast<WeaponObject*>(object);
 			if (weaponObject->isJediWeapon()) {
 				VisibilityManager::instance()->increaseVisibility(creo, VisibilityManager::SABERVISMOD);
 			}
 		}
 	}
-
-	ghost->updateStats();
 
 	return ContainerComponent::notifyObjectInserted(sceneObject, object);
 }
@@ -220,13 +221,15 @@ int PlayerContainerComponent::notifyObjectRemoved(SceneObject* sceneObject, Scen
 	// Jedi stuff below.
 	PlayerObject* ghost = creo->getPlayerObject();
 
-	if (ghost && ghost->isJedi()) {
-		if (object->isRobeObject()) {
-			ghost->recalculateForcePower();
-		}
+	if (ghost != nullptr) {
+		//  ghost->isJedi()) {
+		// if (object->isRobeObject()) {
+		ghost->recalculateForcePower();
+		ghost->updateStats();
+		//}
 	}
 
-	ghost->updateStats();
+
 	
 	return ContainerComponent::notifyObjectRemoved(sceneObject, object, destination);
 }

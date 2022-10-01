@@ -2134,7 +2134,7 @@ class PlayerObject extends IntangibleObject {
 		pvpRating = rating;
 	}
 //"kinetic", "blast", "acid", "cold", "stun", "lightsaber", "heat", "electricity", "energy"
-	@prelocked
+	//@prelocked
 	public native void updateResists();
 
 	public native void setEnergyResistance(float val) {
@@ -2392,13 +2392,13 @@ class PlayerObject extends IntangibleObject {
 	// public float getRangedDefenseChance() {
 	// 	return rangedDefenseChance;
 	// }
-	@prelocked
+	//@prelocked
 	public native void updateSecondaryDefenseModifiers();
 
-	@prelocked
+	//@prelocked
 	public native void updateStats();
 	
-	@prelocked
+	//@prelocked
 	public native void updateDotResistances();
 
 	@read
