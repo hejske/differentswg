@@ -2204,51 +2204,51 @@ int CombatManager::getHitChance(TangibleObject* attacker, CreatureObject* target
 	int targetDefense = 0;
 	int diff = 0;
 
+	if (attacker->isCreatureObject())
+		creoAttacker = attacker->asCreatureObject();
+
 	if (data.isForceAttack()) {
-		if (attacker->isCreatureObject()) {
-			creoAttacker = attacker->asCreatureObject();
-			if (creoAttacker != nullptr) {
-				if (creoAttacker->isPlayerCreature()) {
-					//int attackerAccuracy = creoAttacker->getSkillMod(data.getCommand()->getAccuracySkillMod());
-					attackerAccuracy = creoAttacker->getSkillMod("force_accuracy") + creoAttacker->getSkillMod("accuracy") + creoAttacker->getHAM(CreatureAttribute::QUICKNESS) / 20.f; //quickness acc
-					//int moreAccuracy = creoAttacker->getSkillMod("more_force_accuracy") + creoAttacker->getSkillMod("more_accuracy");
-					// if (moreAccuracy > 0)
-					// 	attackerAccuracy *= (1 + moreAccuracy / 100.f);
-				}
-				else if (creoAttacker->isAiAgent()) {
-					attackerAccuracy = 50 + creoAttacker->asAiAgent()->getLevel();// / 2.f;
-				}
+		if (creoAttacker != nullptr) {
+			if (creoAttacker->isPlayerCreature()) {
+				//int attackerAccuracy = creoAttacker->getSkillMod(data.getCommand()->getAccuracySkillMod());
+				attackerAccuracy = creoAttacker->getSkillMod("force_accuracy") + creoAttacker->getSkillMod("accuracy") + creoAttacker->getHAM(CreatureAttribute::QUICKNESS) / 20.f; //quickness acc
+				//int moreAccuracy = creoAttacker->getSkillMod("more_force_accuracy") + creoAttacker->getSkillMod("more_accuracy");
+				// if (moreAccuracy > 0)
+				// 	attackerAccuracy *= (1 + moreAccuracy / 100.f);
+			}
+			else if (creoAttacker->isAiAgent()) {
+				attackerAccuracy = 50 + creoAttacker->asAiAgent()->getLevel();// / 2.f;
+			}
 
-				if (targetCreature->isPlayerCreature()) {
-					targetDefense = targetCreature->getSkillMod("ranged_defense") + targetCreature->getSkillMod("defense") + targetCreature->getHAM(CreatureAttribute::STAMINA) / 20.f; //stam def
-				// 	int moreRangedDef = targetCreature->getSkillMod("more_ranged_defense") + targetCreature->getSkillMod("more_defense");
-				// 	if (moreRangedDef > 0) 
-				// 		targetDefense *= (1 + moreRangedDef / 100.f);	
+			if (targetCreature->isPlayerCreature()) {
+				targetDefense = targetCreature->getSkillMod("ranged_defense") + targetCreature->getSkillMod("defense") + targetCreature->getHAM(CreatureAttribute::STAMINA) / 20.f; //stam def
+			// 	int moreRangedDef = targetCreature->getSkillMod("more_ranged_defense") + targetCreature->getSkillMod("more_defense");
+			// 	if (moreRangedDef > 0) 
+			// 		targetDefense *= (1 + moreRangedDef / 100.f);	
 
+			}
+			else if (targetCreature->isAiAgent()) {
+				targetDefense = 50 + targetCreature->asAiAgent()->getLevel() / 2.f;
+				if (targetCreature->isPet()) {
+					ManagedReference<CreatureObject*> petMaster = targetCreature->getLinkedCreature().get();
+					if (petMaster != nullptr) {
+						int petDefense = petMaster->getSkillMod("pet_defense");
+						if (petDefense > 0) {
+							targetDefense += petDefense;
+						}
+					}	
 				}
-				else if (targetCreature->isAiAgent()) {
-					targetDefense = 50 + targetCreature->asAiAgent()->getLevel() / 2.f;
-					if (targetCreature->isPet()) {
-						ManagedReference<CreatureObject*> petMaster = targetCreature->getLinkedCreature().get();
-						if (petMaster != nullptr) {
-							int petDefense = petMaster->getSkillMod("pet_defense");
-							if (petDefense > 0) {
-								targetDefense += petDefense;
-							}
-						}	
-					}
-				}
+			}
 
-				diff = targetDefense - attackerAccuracy;
+			diff = targetDefense - attackerAccuracy;
 
-				if (diff > 0) {
-					int cap = 90;
-					int factor = 5;
+			if (diff > 0) {
+				int cap = 90;
+				int factor = 5;
 
-					diff = (((diff * cap) / (diff + cap * factor)));
-					if (System::random(100) < diff)
-						return MISS;
-				}
+				diff = (((diff * cap) / (diff + cap * factor)));
+				if (System::random(100) < diff)
+					return MISS;
 			}
 		}
 	}
@@ -2272,33 +2272,40 @@ int CombatManager::getHitChance(TangibleObject* attacker, CreatureObject* target
 		weaponAccuracy = getWeaponRangeModifier(attacker->getWorldPosition().distanceTo(targetCreature->getWorldPosition()) - targetCreature->getTemplateRadius() - attacker->getTemplateRadius(), weapon);
 		// accounts for steadyaim, general aim, and specific weapon aim, these buffs will clear after a completed combat action
 
-		if (creoAttacker != nullptr && weapon->getAttackType() == SharedWeaponObjectTemplate::RANGEDATTACK)
-			weaponAccuracy += creoAttacker->getSkillMod("private_aim");
-
-		debug() << "Attacker weapon accuracy is " << weaponAccuracy;
-
-		attackerAccuracy = getAttackerAccuracyModifier(attacker, targetCreature, weapon);
-		debug() << "Base attacker accuracy is " << attackerAccuracy;
-
 		// need to also add in general attack accuracy (mostly gotten from posture and states)
-
 		int bonusAccuracy = 0;
 
-		if (creoAttacker != nullptr)
+		int postureAccuracy = 0;
+
+		if (creoAttacker != nullptr) {
+			if (weapon->getAttackType() == SharedWeaponObjectTemplate::RANGEDATTACK)
+				weaponAccuracy += creoAttacker->getSkillMod("private_aim");
+
 			bonusAccuracy = getAttackerAccuracyBonus(creoAttacker, weapon);
+			
+			postureAccuracy = calculatePostureModifier(creoAttacker, weapon);
+		}
+
+		//debug() << "Attacker weapon accuracy is " << weaponAccuracy;
+
+		attackerAccuracy = getAttackerAccuracyModifier(attacker, targetCreature, weapon);
+		//debug() << "Base attacker accuracy is " << attackerAccuracy;
+
+		// if (creoAttacker != nullptr)
+		// 	bonusAccuracy = getAttackerAccuracyBonus(creoAttacker, weapon);
 
 		// this is the scout/ranger creature hit bonus that only works against creatures (not NPCS)
 		// if (targetCreature->isCreature() && creoAttacker != nullptr)
 		// 	bonusAccuracy += creoAttacker->getSkillMod("creature_hit_bonus");
 
-		debug() << "Attacker total bonus is " << bonusAccuracy;
+		//debug() << "Attacker total bonus is " << bonusAccuracy;
 
-		int postureAccuracy = 0;
+		//int postureAccuracy = 0;
 
-		if (creoAttacker != nullptr)
-			postureAccuracy = calculatePostureModifier(creoAttacker, weapon);
+		// if (creoAttacker != nullptr)
+		// 	postureAccuracy = calculatePostureModifier(creoAttacker, weapon);
 
-		debug() << "Attacker posture accuracy is " << postureAccuracy;
+		//debug() << "Attacker posture accuracy is " << postureAccuracy;
 
 		int targetDefense = getDefenderDefenseModifier(targetCreature, weapon, attacker);
 		debug() << "Defender defense is " << targetDefense;
