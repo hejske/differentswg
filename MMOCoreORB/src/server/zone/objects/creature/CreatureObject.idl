@@ -134,6 +134,9 @@ class CreatureObject extends TangibleObject {
 	@dereferenced
 	protected DeltaVector<int> maxHamList;
 
+	@dereferenced
+	protected DeltaVector<int> bonusMaxHamList;
+
 	protected byte frozen;
 
 	protected string templateString;
@@ -2296,4 +2299,28 @@ class CreatureObject extends TangibleObject {
 	public native WeaponObject getOffHandWeapon();
 
 	public native boolean isWearingArmor();
+
+	@read
+	public int getBonusMaxHAM(int idx) {
+		return bonusMaxHamList.get(idx);
+	}
+
+	@preLocked
+	public native void setBonusMaxHAM(int type, int value) {
+		bonusMaxHamList.get(type) = value;
+	}
+
+	@local
+	@read
+	public final DeltaVector<int> getBonusMaxHAM() {
+		return bonusMaxHamList;
+	}
+
+	@preLocked
+	public native void addBonusMaxHAM(int type, int value, boolean notifyClient = true, boolean base = false);
+
+	@preLocked
+	public native void addIncreasedHAM(int type, int value, boolean notifyClient = true);
+
+
 }

@@ -151,7 +151,7 @@ void ArmorObjectImplementation::fillAttributeList(AttributeListMessage* alm, Cre
 	}
 	if (!isSpecial(SharedWeaponObjectTemplate::ENERGY) && !isVulnerable(SharedWeaponObjectTemplate::ENERGY) && getEnergy() >= 0.5) {
 		StringBuffer txt;
-		txt << Math::getPrecision(getEnergy(),1) << "%";
+		txt << Math::getPrecision(getEnergy(),1);// << "%";
 		alm->insertAttribute("cat_armor_effectiveness.armor_eff_energy",
 				txt.toString());
 	}

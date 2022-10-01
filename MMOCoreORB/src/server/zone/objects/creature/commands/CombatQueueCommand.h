@@ -656,14 +656,15 @@ public:
 		StateEffect effect = getStateEffect(effectType);
 		Reference<Buff*> buff = nullptr;
 
-		Vector<String> defenseMods = effect.getDefenderStateDefenseModifiers();
-		float targetDefense = 0.f;
-		for (int j = 0; j < defenseMods.size(); j++)
-			targetDefense += defender->getSkillMod(defenseMods.get(j));
+		// Vector<String> defenseMods = effect.getDefenderStateDefenseModifiers();
+		// float targetDefense = 0.f;
+		// for (int j = 0; j < defenseMods.size(); j++)
+		// 	targetDefense += defender->getSkillMod(defenseMods.get(j));
 
-		targetDefense -= mod;
+		// targetDefense -= mod;
 
-		uint32 duration = (uint32) Math::max(5.f, effect.getStateLength()*(1.f-targetDefense/120.f));
+		//uint32 duration = (uint32) Math::max(5.f, effect.getStateLength()*(1.f-targetDefense/120.f));
+		uint32 duration = effect.getStateLength(); //Need to grab this from command instead for customized commands (and the rest of the state values)
 
 		switch (effectType) {
 		case CommandEffect::BLIND:

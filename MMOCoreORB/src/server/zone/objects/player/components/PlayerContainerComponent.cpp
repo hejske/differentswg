@@ -168,6 +168,8 @@ int PlayerContainerComponent::notifyObjectInserted(SceneObject* sceneObject, Sce
 		}
 	}
 
+	ghost->updateStats();
+
 	return ContainerComponent::notifyObjectInserted(sceneObject, object);
 }
 
@@ -224,5 +226,7 @@ int PlayerContainerComponent::notifyObjectRemoved(SceneObject* sceneObject, Scen
 		}
 	}
 
+	ghost->updateStats();
+	
 	return ContainerComponent::notifyObjectRemoved(sceneObject, object, destination);
 }

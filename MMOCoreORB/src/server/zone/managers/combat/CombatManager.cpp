@@ -945,12 +945,31 @@ Reference<SortedVector<ManagedReference<TangibleObject*>>*> CombatManager::getAr
 	PlayerManager* playerManager = zone->getZoneServer()->getPlayerManager();
 
 	int damage = 0;
+	int increasedAreaOfEffect = 0;
+	if (attacker->isPlayerCreature()) {
+		ManagedReference<CreatureObject*> player = attacker->asCreatureObject();
+		if (player != nullptr) {
+			increasedAreaOfEffect = player->getSkillMod("increased_area_of_effect");
+			if (data.isForceAttack()) {
+				increasedAreaOfEffect += player->getSkillMod("increased_force_area_of_effect");
+			}
+			else {
+				increasedAreaOfEffect += player->getSkillMod("increased_weapon_area_of_effect");
+			}
+		}
+	}
 
 	int areaRange = data.getAreaRange();
+	if (increasedAreaOfEffect != 0 && areaRange > 0)
+		areaRange *= (1 + increasedAreaOfEffect / 100.f);
+
 	int range = areaRange;
 
 	if (data.getCommand()->isConeAction()) {
 		int coneRange = data.getConeRange();
+
+		if (increasedAreaOfEffect != 0 && coneRange > 0)
+			coneRange *= (1 + increasedAreaOfEffect / 100.f);
 
 		if (coneRange > -1) {
 			range = coneRange;
@@ -1337,7 +1356,7 @@ float CombatManager::applyDamageModifiers(CreatureObject* attacker, WeaponObject
 void CombatManager::calculateKaareDamage(CreatureObject* attacker, CreatureObject* defender, WeaponObject* weapon, float damage, const CreatureAttackData& data, bool crit) const {
 
 	if (attacker->isPlayerCreature()) {	
-		int increasedDamage = attacker->getSkillMod("increased_damage");
+		int increasedDamage = attacker->getSkillMod("increased_damage") + attacker->getHAM(CreatureAttribute::STRENGTH) / 5.f; //strength damage inc
 			if (data.isForceAttack()) {
 			int increasedPowersDamage = attacker->getSkillMod("increased_force_damage");
 			if (increasedPowersDamage > 0 || increasedDamage > 0) {
@@ -1356,8 +1375,7 @@ void CombatManager::calculateKaareDamage(CreatureObject* attacker, CreatureObjec
 			damage *= (1 + moreDamage / 100.f);
 
 	}
-
-	if (attacker->isPet()) {
+	else if (attacker->isPet()) {
 		calculatePetDamageIncreases(attacker, damage);
 	}
 	
@@ -1742,143 +1760,7 @@ void CombatManager::calculateKaareDotDamage(CreatureObject* attacker, CreatureOb
 	int type = 0;
 	float resistance = 0;
 	float dotResistance = 0;
-	
 
-	switch (dotType) {
-		case 1: // POISON
-			type = CreatureState::POISONED;
-			if (attacker->isPlayerCreature()) {
-				int dotDmg = attacker->getSkillMod("increased_dot_damage");
-				int psnDmg = attacker->getSkillMod("increased_poison_damage");
-				if (dotDmg > 0 || psnDmg > 0)
-					damage *= (1 + (dotDmg + psnDmg) / 100.f);
-			}
-			if (defender->isPlayerCreature()) {
-				float acidResi = defender->getPlayerObject()->getAcidResistance();
-				if (acidResi > 0)
-					damage *= (1 - acidResi);
-				float poisonResi = defender->getPlayerObject()->getPoisonResistance();
-				if (poisonResi > 0)
-					damage *= (1 - poisonResi);
-			}
-			else if (defender->isAiAgent()) {
-				float aiResi = defender->asAiAgent()->getAcid();
-				if (aiResi > 0)
-				damage *= (1 - aiResi);
-			}
-			// resist = defender->getSkillMod("resistance_poison");
-			break;
-		case 2: // DISEASE
-			type = CreatureState::DISEASED;
-			if (attacker->isPlayerCreature()) {
-				int dotDmg = attacker->getSkillMod("increased_dot_damage");
-				int psnDmg = attacker->getSkillMod("increased_disease_damage");
-				int moreDotDmg = attacker->getSkillMod("more_dot_damage");
-				if (dotDmg > 0 || psnDmg > 0)
-					damage *= (1 + (dotDmg + psnDmg) / 100.f);
-				if (moreDotDmg > 0) {
-					damage *= (1 + moreDotDmg / 100.f);
-				}
-			}
-			if (defender->isPlayerCreature()) {
-				float acidResi = defender->getPlayerObject()->getAcidResistance();
-				if (acidResi > 0)
-					damage *= (1 - acidResi);
-				float poisonResi = defender->getPlayerObject()->getDiseaseResistance();
-				if (poisonResi > 0)
-					damage *= (1 - poisonResi);
-			}
-			else if (defender->isAiAgent()) {
-				float aiResi = defender->asAiAgent()->getAcid();
-				if (aiResi > 0)
-				damage *= (1 - aiResi);
-			}
-			// resist = defender->getSkillMod("resistance_disease");
-			break;
-		case 3: // FIRE
-			type = CreatureState::ONFIRE;
-			if (attacker->isPlayerCreature()) {
-				int moreDotDmg = attacker->getSkillMod("more_dot_damage");
-				int dotDmg = attacker->getSkillMod("increased_dot_damage");
-				int psnDmg = attacker->getSkillMod("increased_fire_damage");
-				if (dotDmg > 0 || psnDmg > 0)
-					damage *= (1 + (dotDmg + psnDmg) / 100.f);
-				if (moreDotDmg > 0) {
-					damage *= (1 + moreDotDmg / 100.f);
-				}
-			}
-			if (defender->isPlayerCreature()) {
-				float acidResi = defender->getPlayerObject()->getHeatResistance();
-				if (acidResi > 0)
-					damage *= (1 - acidResi);
-				float poisonResi = defender->getPlayerObject()->getFireResistance();
-				if (poisonResi > 0)
-					damage *= (1 - poisonResi);
-			}
-			else if (defender->isAiAgent()) {
-				float aiResi = defender->asAiAgent()->getAcid();
-				if (aiResi > 0)
-				damage *= (1 - aiResi);
-			}
-			// resist = defender->getSkillMod("resistance_fire");
-			break;
-		case 4: // BLEED
-			type = CreatureState::BLEEDING;
-			if (attacker->isPlayerCreature()) {
-				int moreDotDmg = attacker->getSkillMod("more_dot_damage");
-				int dotDmg = attacker->getSkillMod("increased_dot_damage");
-				int psnDmg = attacker->getSkillMod("increased_bleed_damage");
-				if (dotDmg > 0 || psnDmg > 0)
-					damage *= (1 + (dotDmg + psnDmg) / 100.f);
-				if (moreDotDmg > 0) {
-					damage *= (1 + moreDotDmg / 100.f);
-				}
-			}
-			if (defender->isPlayerCreature()) {
-				float acidResi = defender->getPlayerObject()->getKineticResistance();
-				if (acidResi > 0)
-					damage *= (1 - acidResi);
-				float poisonResi = defender->getPlayerObject()->getBleedResistance();
-				if (poisonResi > 0)
-					damage *= (1 - poisonResi);
-			}
-			else if (defender->isAiAgent()) {
-				float aiResi = defender->asAiAgent()->getAcid();
-				if (aiResi > 0)
-				damage *= (1 - aiResi);
-			}
-			//resist = defender->getSkillMod("combat_bleeding_defense");
-			break;
-		case 5:
-			type = CommandEffect::FORCECHOKE;
-				if (attacker->isPlayerCreature()) {
-				int moreDotDmg = attacker->getSkillMod("more_dot_damage");
-				int dotDmg = attacker->getSkillMod("increased_dot_damage");
-				int psnDmg = attacker->getSkillMod("increased_choke_damage");
-				if (dotDmg > 0 || psnDmg > 0)
-					damage *= (1 + (dotDmg + psnDmg) / 100.f);
-				if (moreDotDmg > 0) {
-					damage *= (1 + moreDotDmg / 100.f);
-				}
-			}
-			if (defender->isPlayerCreature()) {
-				float acidResi = defender->getPlayerObject()->getLightsaberResistance();
-				if (acidResi > 0)
-					damage *= (1 - acidResi);
-				float poisonResi = defender->getPlayerObject()->getChokeResistance();
-				if (poisonResi > 0)
-					damage *= (1 - poisonResi);
-			}
-			else if (defender->isAiAgent()) {
-				float aiResi = defender->asAiAgent()->getAcid();
-				if (aiResi > 0)
-				damage *= (1 - aiResi);			
-			}
-			break;
-		default:
-			break;
-		}
-		
 	if (attacker->isPet()) {
 		ManagedReference<CreatureObject*> petMasterA = defender->getLinkedCreature().get();
 		if (petMasterA != nullptr) {
@@ -1888,18 +1770,132 @@ void CombatManager::calculateKaareDotDamage(CreatureObject* attacker, CreatureOb
 			}
 		}	
 	}
-	if (defender->isPet()) {
-		ManagedReference<CreatureObject*> petMasterD = defender->getLinkedCreature().get();
-		if (petMasterD != nullptr) {
-			int petDotResi = petMasterD->getSkillMod("pet_dot_resistance");
-			if (petDotResi > 0) {
-				int cap = 90;
-				int factor = 5;
-				petDotResi = (1 - ((petDotResi * cap) / (petDotResi + cap * factor)) / 100.f);
-				damage *= petDotResi;
-			}
-		}	
-	}	
+	
+	else if (attacker->isPlayerCreature()) {
+
+		int moreDotDmg = attacker->getSkillMod("more_dot_damage");
+		int dotDmg = attacker->getSkillMod("increased_dot_damage");
+		int bonusDmg = 0;
+
+		switch (dotType) {
+		case 1: // POISON
+			type = CreatureState::POISONED;
+				bonusDmg = attacker->getSkillMod("increased_poison_damage");
+				if (dotDmg > 0 || bonusDmg > 0)
+					damage *= (1 + (dotDmg + bonusDmg) / 100.f);
+				if (moreDotDmg > 0)
+					damage *= (1 + moreDotDmg / 100.f);
+			// }
+			// if (defender->isPlayerCreature()) {
+			// 	float acidResi = defender->getPlayerObject()->getAcidResistance();
+			// 	if (acidResi > 0)
+			// 		damage *= (1 - acidResi);
+			// 	float poisonResi = defender->getPlayerObject()->getPoisonResistance();
+			// 	if (poisonResi > 0)
+			// 		damage *= (1 - poisonResi);
+			// }
+			// else if (defender->isAiAgent()) {
+			// 	float aiResi = defender->asAiAgent()->getAcid();
+			// 	if (aiResi > 0)
+			// 	damage *= (1 - aiResi);
+			// }
+			// resist = defender->getSkillMod("resistance_poison");
+			break;
+		case 2: // DISEASE
+			type = CreatureState::DISEASED;
+				bonusDmg = attacker->getSkillMod("increased_disease_damage");
+				if (dotDmg > 0 || bonusDmg > 0)
+					damage *= (1 + (dotDmg + bonusDmg) / 100.f);
+				if (moreDotDmg > 0)
+					damage *= (1 + moreDotDmg / 100.f);
+			
+			//}
+			// if (defender->isPlayerCreature()) {
+			// 	float acidResi = defender->getPlayerObject()->getAcidResistance();
+			// 	if (acidResi > 0)
+			// 		damage *= (1 - acidResi);
+			// 	float poisonResi = defender->getPlayerObject()->getDiseaseResistance();
+			// 	if (poisonResi > 0)
+			// 		damage *= (1 - poisonResi);
+			// }
+			// else if (defender->isAiAgent()) {
+			// 	float aiResi = defender->asAiAgent()->getAcid();
+			// 	if (aiResi > 0)
+			// 	damage *= (1 - aiResi);
+			// }
+			// resist = defender->getSkillMod("resistance_disease");
+			break;
+		case 3: // FIRE
+			type = CreatureState::ONFIRE;
+				bonusDmg = attacker->getSkillMod("increased_fire_damage");
+				if (dotDmg > 0 || bonusDmg > 0)
+					damage *= (1 + (dotDmg + bonusDmg) / 100.f);
+				if (moreDotDmg > 0)
+					damage *= (1 + moreDotDmg / 100.f);
+				
+			// if (defender->isPlayerCreature()) {
+			// 	float acidResi = defender->getPlayerObject()->getHeatResistance();
+			// 	if (acidResi > 0)
+			// 		damage *= (1 - acidResi);
+			// 	float poisonResi = defender->getPlayerObject()->getFireResistance();
+			// 	if (poisonResi > 0)
+			// 		damage *= (1 - poisonResi);
+			// }
+			// else if (defender->isAiAgent()) {
+			// 	float aiResi = defender->asAiAgent()->getAcid();
+			// 	if (aiResi > 0)
+			// 	damage *= (1 - aiResi);
+			// }
+			// resist = defender->getSkillMod("resistance_fire");
+			break;
+		case 4: // BLEED
+			type = CreatureState::BLEEDING;
+				bonusDmg = attacker->getSkillMod("increased_bleed_damage");
+				if (dotDmg > 0 || bonusDmg > 0)
+					damage *= (1 + (dotDmg + bonusDmg) / 100.f);
+				if (moreDotDmg > 0)
+					damage *= (1 + moreDotDmg / 100.f);
+			// if (defender->isPlayerCreature()) {
+			// 	float acidResi = defender->getPlayerObject()->getKineticResistance();
+			// 	if (acidResi > 0)
+			// 		damage *= (1 - acidResi);
+			// 	float poisonResi = defender->getPlayerObject()->getBleedResistance();
+			// 	if (poisonResi > 0)
+			// 		damage *= (1 - poisonResi);
+			// }
+			// else if (defender->isAiAgent()) {
+			// 	float aiResi = defender->asAiAgent()->getAcid();
+			// 	if (aiResi > 0)
+			// 	damage *= (1 - aiResi);
+			// }
+			//resist = defender->getSkillMod("combat_bleeding_defense");
+			break;
+		case 5:
+			type = CommandEffect::FORCECHOKE;
+				bonusDmg = attacker->getSkillMod("increased_choke_damage");
+				if (dotDmg > 0 || bonusDmg > 0)
+					damage *= (1 + (dotDmg + bonusDmg) / 100.f);
+				if (moreDotDmg > 0)
+					damage *= (1 + moreDotDmg / 100.f);
+						
+			// if (defender->isPlayerCreature()) {
+			// 	float acidResi = defender->getPlayerObject()->getLightsaberResistance();
+			// 	if (acidResi > 0)
+			// 		damage *= (1 - acidResi);
+			// 	float poisonResi = defender->getPlayerObject()->getChokeResistance();
+			// 	if (poisonResi > 0)
+			// 		damage *= (1 - poisonResi);
+			// }
+			// else if (defender->isAiAgent()) {
+			// 	float aiResi = defender->asAiAgent()->getAcid();
+			// 	if (aiResi > 0)
+			// 	damage *= (1 - aiResi);			
+			// }
+			break;
+		default:
+			break;
+		}
+	}
 }
 
 void CombatManager::applyWeaponDots(CreatureObject* attacker, CreatureObject* defender, WeaponObject* weapon) const {
@@ -2121,10 +2117,14 @@ int CombatManager::getAttackerAccuracyBonus(CreatureObject* attacker, WeaponObje
 	bonus += attacker->getSkillMod("private_attack_accuracy");
 	bonus += attacker->getSkillMod("private_accuracy_bonus");
 
-	if (weapon->getAttackType() == SharedWeaponObjectTemplate::MELEEATTACK)
+	if (weapon->getAttackType() == SharedWeaponObjectTemplate::MELEEATTACK) {
 		bonus += attacker->getSkillMod("private_melee_accuracy_bonus");
-	if (weapon->getAttackType() == SharedWeaponObjectTemplate::RANGEDATTACK)
+		bonus += attacker->getSkillMod("melee_accuracy");
+	}
+	if (weapon->getAttackType() == SharedWeaponObjectTemplate::RANGEDATTACK) {
 		bonus += attacker->getSkillMod("private_ranged_accuracy_bonus");
+		bonus += attacker->getSkillMod("ranged_accuracy");
+	}
 
 	return bonus;
 }
@@ -2185,8 +2185,8 @@ int CombatManager::getDefenderSecondaryDefenseModifier(CreatureObject* defender)
 		targetDefense += defender->getSkillMod("private_" + mod);
 	}
 
-	if (targetDefense > 125)
-		targetDefense = 125;
+	// if (targetDefense > 125)
+	// 	targetDefense = 125;
 
 	return targetDefense;
 }
@@ -2209,18 +2209,18 @@ int CombatManager::getHitChance(TangibleObject* attacker, CreatureObject* target
 			creoAttacker = attacker->asCreatureObject();
 			if (creoAttacker != nullptr) {
 				if (creoAttacker->isPlayerCreature()) {
-				//int attackerAccuracy = creoAttacker->getSkillMod(data.getCommand()->getAccuracySkillMod());
-				attackerAccuracy = creoAttacker->getSkillMod("force_accuracy") + creoAttacker->getSkillMod("accuracy");
-				//int moreAccuracy = creoAttacker->getSkillMod("more_force_accuracy") + creoAttacker->getSkillMod("more_accuracy");
-				// if (moreAccuracy > 0)
-				// 	attackerAccuracy *= (1 + moreAccuracy / 100.f);
+					//int attackerAccuracy = creoAttacker->getSkillMod(data.getCommand()->getAccuracySkillMod());
+					attackerAccuracy = creoAttacker->getSkillMod("force_accuracy") + creoAttacker->getSkillMod("accuracy") + creoAttacker->getHAM(CreatureAttribute::QUICKNESS) / 20.f; //quickness acc
+					//int moreAccuracy = creoAttacker->getSkillMod("more_force_accuracy") + creoAttacker->getSkillMod("more_accuracy");
+					// if (moreAccuracy > 0)
+					// 	attackerAccuracy *= (1 + moreAccuracy / 100.f);
 				}
 				else if (creoAttacker->isAiAgent()) {
-					attackerAccuracy = 50 + creoAttacker->asAiAgent()->getLevel() / 2.f;
+					attackerAccuracy = 50 + creoAttacker->asAiAgent()->getLevel();// / 2.f;
 				}
 
 				if (targetCreature->isPlayerCreature()) {
-					targetDefense = targetCreature->getSkillMod("ranged_defense") + targetCreature->getSkillMod("defense");
+					targetDefense = targetCreature->getSkillMod("ranged_defense") + targetCreature->getSkillMod("defense") + targetCreature->getHAM(CreatureAttribute::STAMINA) / 20.f; //stam def
 				// 	int moreRangedDef = targetCreature->getSkillMod("more_ranged_defense") + targetCreature->getSkillMod("more_defense");
 				// 	if (moreRangedDef > 0) 
 				// 		targetDefense *= (1 + moreRangedDef / 100.f);	
@@ -2307,6 +2307,12 @@ int CombatManager::getHitChance(TangibleObject* attacker, CreatureObject* target
 
 		attackerAccuracy += weaponAccuracy + creoAttacker->getSkillMod("accuracy") + accuracyBonus + postureAccuracy + bonusAccuracy;
 		targetDefense += targetDefense + targetCreature->getSkillMod("defense") + postureDefense;
+
+		if (creoAttacker->isPlayerCreature())
+	 		attackerAccuracy += creoAttacker->getHAM(CreatureAttribute::QUICKNESS) / 20.f;
+
+		if (targetCreature->isPlayerCreature()) 
+			targetDefense += targetCreature->getHAM(CreatureAttribute::STAMINA) / 20.f;	
 
 		diff = targetDefense - attackerAccuracy;
 
@@ -2479,6 +2485,8 @@ int CombatManager::getSpeedModifier(CreatureObject* attacker, WeaponObject* weap
 
 	speedMods += attacker->getSkillMod("private_speed_bonus");
 
+	speedMods += attacker->getSkillMod("action_speed");
+
 	if (weapon->getAttackType() == SharedWeaponObjectTemplate::MELEEATTACK) {
 		speedMods += attacker->getSkillMod("private_melee_speed_bonus");
 		speedMods += attacker->getSkillMod("melee_speed");
@@ -2486,6 +2494,8 @@ int CombatManager::getSpeedModifier(CreatureObject* attacker, WeaponObject* weap
 		speedMods += attacker->getSkillMod("private_ranged_speed_bonus");
 		speedMods += attacker->getSkillMod("ranged_speed");
 	}
+
+
 
 	return speedMods;
 }
@@ -3278,24 +3288,30 @@ bool CombatManager::applySpecialAttackCost(CreatureObject* attacker, WeaponObjec
 // Apply States
 void CombatManager::applyStates(CreatureObject* creature, CreatureObject* targetCreature, DefenderHitList* hitList, const CreatureAttackData& data) const {
 	const VectorMap<uint8, StateEffect>* stateEffects = data.getStateEffects();
-	int stateAccuracyBonus = data.getStateAccuracyBonus();
+	//int stateAccuracyBonus = data.getStateAccuracyBonus();
 
 	if (targetCreature->isInvulnerable()) {
 		return;
 	}
 
+	bool wearingArmor = true;
+
+	if (targetCreature->isPlayerCreature()) {
+		wearingArmor = targetCreature->isWearingArmor();
+	}
+
 	Locker statelock(targetCreature, creature);
 
-	int playerLevel = 0;
-	if (targetCreature->isPlayerCreature()) {
-		ZoneServer* server = targetCreature->getZoneServer();
-		if (server != nullptr) {
-			PlayerManager* pManager = server->getPlayerManager();
-			if (pManager != nullptr) {
-				playerLevel = pManager->calculatePlayerLevel(targetCreature) - 5;
-			}
-		}
-	}
+	// int playerLevel = 0;
+	// if (targetCreature->isPlayerCreature()) {
+	// 	ZoneServer* server = targetCreature->getZoneServer();
+	// 	if (server != nullptr) {
+	// 		PlayerManager* pManager = server->getPlayerManager();
+	// 		if (pManager != nullptr) {
+	// 			playerLevel = pManager->calculatePlayerLevel(targetCreature) - 5;
+	// 		}
+	// 	}
+	// }
 
 	// loop through all the states in the command
 	for (int i = 0; i < stateEffects->size(); i++) {
@@ -3303,7 +3319,9 @@ void CombatManager::applyStates(CreatureObject* creature, CreatureObject* target
 		bool failed = false;
 		uint8 effectType = effect.getEffectType();
 
-		float accuracyMod = effect.getStateChance() + stateAccuracyBonus;
+		//float accuracyMod = effect.getStateChance() + stateAccuracyBonus;
+		float accuracyMod = effect.getStateChance(); 
+
 		if (data.isStateOnlyAttack()) {
 			accuracyMod += creature->getSkillMod(data.getCommand()->getAccuracySkillMod());
 		}
@@ -3334,39 +3352,51 @@ void CombatManager::applyStates(CreatureObject* creature, CreatureObject* target
 				targetDefense += targetCreature->getSkillMod(defenseMods.get(j));
 			}
 
-			targetDefense /= 1.5;
-			targetDefense += playerLevel;
+			if (!wearingArmor) {
+				targetDefense += targetCreature->getSkillMod("jedi_state_defense");
+			}
+
+			if (targetDefense > 90)
+				targetDefense = 90;
+
+			accuracyMod *= targetDefense / 100.f;
+			//targetDefense /= 1.5;
+			//targetDefense += playerLevel;
 
 			// Run roll to check against
 			int roll = System::random(100);
 
-			// Chance to apply needs to always be 10% no matter the calc
-			int calc = Math::max(10, (int)(accuracyMod - targetDefense));
-
-			if (roll > calc) {
+			if (roll > accuracyMod) {
 				failed = true;
 			}
 
+			// Chance to apply needs to always be 10% no matter the calc
+			// int calc = Math::max(10, (int)(accuracyMod - targetDefense));
+
+			// if (roll > calc) {
+			// 	failed = true;
+			// }
+
 			// no reason to apply jedi defenses if primary defense was successful
 			// and only perform extra rolls if the character is a Jedi
-			if (!failed && targetCreature->isPlayerCreature() && targetCreature->getPlayerObject()->isJedi()) {
-				const Vector<String>& jediMods = effect.getDefenderJediStateDefenseModifiers();
-				// second chance for jedi, roll against their special defenses jedi_state_defense & resistance_states
-				for (int j = 0; j < jediMods.size(); j++) {
-					targetDefense = targetCreature->getSkillMod(jediMods.get(j));
+			// if (!failed && targetCreature->isPlayerCreature() && targetCreature->getPlayerObject()->isJedi()) {
+			// 	const Vector<String>& jediMods = effect.getDefenderJediStateDefenseModifiers();
+			// 	// second chance for jedi, roll against their special defenses jedi_state_defense & resistance_states
+			// 	for (int j = 0; j < jediMods.size(); j++) {
+			// 		targetDefense = targetCreature->getSkillMod(jediMods.get(j));
 
-					targetDefense /= 1.5;
-					targetDefense += playerLevel;
+			// 		targetDefense /= 1.5;
+			// 		targetDefense += playerLevel;
 
-					// Chance to apply needs to always be 10% no matter the calc
-					calc = Math::max(10, (int)(accuracyMod - targetDefense));
+			// 		// Chance to apply needs to always be 10% no matter the calc
+			// 		calc = Math::max(10, (int)(accuracyMod - targetDefense));
 
-					if (roll > calc) {
-						failed = true;
-						break;
-					}
-				}
-			}
+			// 		if (roll > calc) {
+			// 			failed = true;
+			// 			break;
+			// 		}
+			// 	}
+			// }
 		}
 
 		if (!failed) {
@@ -3377,7 +3407,8 @@ void CombatManager::applyStates(CreatureObject* creature, CreatureObject* target
 				creature->sendSystemMessage(stringId);
 			}
 
-			data.getCommand()->applyEffect(creature, targetCreature, effectType, effect.getStateStrength() + stateAccuracyBonus);
+			//data.getCommand()->applyEffect(creature, targetCreature, effectType, effect.getStateStrength() + stateAccuracyBonus);
+			data.getCommand()->applyEffect(creature, targetCreature, effectType, effect.getStateStrength());
 
 			if (data.changesDefenderPosture()) {
 				targetCreature->updatePostures(true);
@@ -3387,21 +3418,21 @@ void CombatManager::applyStates(CreatureObject* creature, CreatureObject* target
 		// can move this to scripts, but only these states have fail messages
 		if (failed) {
 			switch (effectType) {
-			case CommandEffect::KNOCKDOWN:
-				if (!targetCreature->checkKnockdownRecovery() && targetCreature->getPosture() != CreaturePosture::UPRIGHT)
-					targetCreature->setPosture(CreaturePosture::UPRIGHT);
-				creature->sendSystemMessage("@cbt_spam:knockdown_fail");
-				break;
-			case CommandEffect::POSTUREDOWN:
-				if (!targetCreature->checkPostureDownRecovery() && targetCreature->getPosture() != CreaturePosture::UPRIGHT)
-					targetCreature->setPosture(CreaturePosture::UPRIGHT);
-				creature->sendSystemMessage("@cbt_spam:posture_change_fail");
-				break;
-			case CommandEffect::POSTUREUP:
-				if (!targetCreature->checkPostureUpRecovery() && targetCreature->getPosture() != CreaturePosture::UPRIGHT)
-					targetCreature->setPosture(CreaturePosture::UPRIGHT);
-				creature->sendSystemMessage("@cbt_spam:posture_change_fail");
-				break;
+			// case CommandEffect::KNOCKDOWN:
+			// 	if (!targetCreature->checkKnockdownRecovery() && targetCreature->getPosture() != CreaturePosture::UPRIGHT)
+			// 		//targetCreature->setPosture(CreaturePosture::UPRIGHT);
+			// 	//creature->sendSystemMessage("@cbt_spam:knockdown_fail");
+			// 	break;
+			// case CommandEffect::POSTUREDOWN:
+			// 	if (!targetCreature->checkPostureDownRecovery() && targetCreature->getPosture() != CreaturePosture::UPRIGHT)
+			// 		//targetCreature->setPosture(CreaturePosture::UPRIGHT);
+			// 	//creature->sendSystemMessage("@cbt_spam:posture_change_fail");
+			// 	break;
+			// case CommandEffect::POSTUREUP:
+			// 	if (!targetCreature->checkPostureUpRecovery() && targetCreature->getPosture() != CreaturePosture::UPRIGHT)
+			// 		//targetCreature->setPosture(CreaturePosture::UPRIGHT);
+			// 	//creature->sendSystemMessage("@cbt_spam:posture_change_fail");
+			// 	break;
 			case CommandEffect::NEXTATTACKDELAY:
 				if (data.getCommand()->getNameCRC() != STRING_HASHCODE("panicshot"))
 					targetCreature->showFlyText("combat_effects", "warcry_miss", 0xFF, 0, 0);
@@ -3796,37 +3827,37 @@ int CombatManager::getWeaponSpecificCriticalChance(CreatureObject* attacker, Wea
 	//ManagedReference<WeaponObject*> weapon = attacker->getWeapon();
 	switch (attacker->getWeapon()->getGameObjectType()) {
 		case SceneObjectType::ONEHANDMELEEWEAPON:
-		critChance = attacker->getSkillMod("one_hand_critical_chance");
+		critChance = attacker->getSkillMod("increased_one_hand_critical_chance");
 		break;
 	case SceneObjectType::TWOHANDMELEEWEAPON:
-		critChance = attacker->getSkillMod("two_hand_critical_chance");
+		critChance = attacker->getSkillMod("increased_two_hand_critical_chance");
 		break;
 	case SceneObjectType::WEAPON:
 	case SceneObjectType::MELEEWEAPON:
-		critChance = attacker->getSkillMod("unarmed_critical_chance");
+		critChance = attacker->getSkillMod("increased_unarmed_critical_chance");
 		break;
 	case SceneObjectType::RIFLE:
-		critChance = attacker->getSkillMod("rifle_critical_chance");
+		critChance = attacker->getSkillMod("increased_rifle_critical_chance");
 		break;
 	case SceneObjectType::PISTOL:
-		critChance = attacker->getSkillMod("pistol_critical_chance");
+		critChance = attacker->getSkillMod("increased_pistol_critical_chance");
 		break;
 	case SceneObjectType::CARBINE:
-		critChance = attacker->getSkillMod("carbine_critical_chance");
+		critChance = attacker->getSkillMod("increased_carbine_critical_chance");
 		break;
 	case SceneObjectType::POLEARM:
-		critChance = attacker->getSkillMod("polearm_critical_chance");
+		critChance = attacker->getSkillMod("increased_polearm_critical_chance");
 		break;
 	case SceneObjectType::THROWNWEAPON:
-		critChance = attacker->getSkillMod("thrown_critical_chance");
+		critChance = attacker->getSkillMod("increased_thrown_critical_chance");
 		break;
 	case SceneObjectType::MINE:
 	case SceneObjectType::SPECIALHEAVYWEAPON:
 	case SceneObjectType::HEAVYWEAPON:
-		critChance = attacker->getSkillMod("heavy_weapon_critical_chance");
+		critChance = attacker->getSkillMod("increased_heavy_weapon_critical_chance");
 		break;
 	default:
-		critChance = attacker->getSkillMod("unarmed_critical_chance");
+		critChance = attacker->getSkillMod("increased_unarmed_critical_chance");
 		break;
 	}
 	// if (isJediOneHandedWeapon() || isJediTwoHandedWeapon() || isJediPolearmWeapon())

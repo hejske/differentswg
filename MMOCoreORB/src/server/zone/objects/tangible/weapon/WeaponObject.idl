@@ -151,6 +151,8 @@ class WeaponObject extends TangibleObject {
 		speedSlice = 1;
 
 		wearableSkillMods.setAllowOverwriteInsertPlan();
+
+		itemLevel = 0;
 	}
 
 	@local

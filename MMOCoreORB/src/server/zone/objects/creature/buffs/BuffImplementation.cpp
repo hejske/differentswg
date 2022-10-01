@@ -294,17 +294,21 @@ void BuffImplementation::applyAttributeModifiers() {
 			continue;
 
 		try {
-			//if (value > 0) {
-				if (attribute == CreatureAttribute::HEALTH) {
-					incHamMod = creo->getSkillMod("increased_health");
-					if (incHamMod > 0)
-						value *= (1 + incHamMod / 100.f);
-				}
-				else if (attribute == CreatureAttribute::MIND) {
-					incHamMod = creo->getSkillMod("increased_mind");
-					if (incHamMod > 0)
-						value *= (1 + incHamMod / 100.f);
-				}
+
+			// Vector<String> resistNames = {"poison", "fire", "disease", "bleed", "choke"};
+
+			// String resi = "resistance_";
+			// //if (value > 0) {
+			// 	if (attribute == CreatureAttribute::HEALTH) {
+			// 		incHamMod = creo->getSkillMod("increased_health");
+			// 		if (incHamMod > 0)
+			// 			value *= (1 + incHamMod / 100.f);
+			// 	}
+			// 	else if (attribute == CreatureAttribute::MIND) {
+			// 		incHamMod = creo->getSkillMod("increased_mind");
+			// 		if (incHamMod > 0)
+			// 			value *= (1 + incHamMod / 100.f);
+			// 	}
 			//}
 
 			int currentMaxHAM = creo->getMaxHAM(attribute);
@@ -317,7 +321,8 @@ void BuffImplementation::applyAttributeModifiers() {
 			attributeModifiers.drop(attribute);
 			attributeModifiers.put(attribute, buffAmount);
 
-			creo->setMaxHAM(attribute, newMaxHAM);
+			//creo->setMaxHAM(attribute, newMaxHAM);
+			creo->addMaxHAM(attribute, buffAmount);
 
 			if (creo->getHAM(attribute) > newMaxHAM - creo->getWounds(attribute))
 				creo->setHAM(attribute, newMaxHAM - creo->getWounds(attribute));

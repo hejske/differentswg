@@ -1344,6 +1344,68 @@ void CreatureObjectImplementation::addMaxHAM(int type, int value,
 	setMaxHAM(type, newValue, notifyClient);
 }
 
+// //should just be in the idl file T_T
+// void CreatureObjectImplementation::setBonusMaxHAM(int type, int value) {
+// 	bonusMaxHamList.get(type) = value;
+// }
+
+void CreatureObjectImplementation::addBonusMaxHAM(int type, int value, bool notifyClient, bool base) {
+	
+	if (type < 0 || type > bonusMaxHamList.size()) {
+		error("invalid type in CreatureObjectImplementation::addBonusMaxHAM");
+		return;
+	}
+
+	if (value == 0)
+		return;
+
+	int currentBonus = bonusMaxHamList.get(type);
+
+	currentBonus += value;
+
+	if (!base) {
+		setBonusMaxHAM(type, currentBonus);
+	}
+
+	Vector<String> attributeNames = {"health", "strength", "constitution", "action", "quickness", "stamina", "mind", "focus", "willpower"};
+
+	String inc = "increased_attribute_";
+
+	String attributeName = inc + attributeNames.get(type);
+
+	int mod = getSkillMod(attributeName);
+
+	if (mod > 0) {
+		value *= (1 + mod / 100.f);
+	}
+
+	int currentValue = maxHamList.get(type);
+	int newValue = currentValue + value;
+
+	addMaxHAM(type, newValue, notifyClient);
+
+}
+
+void CreatureObjectImplementation::addIncreasedHAM(int type, int value, bool notifyClient) {
+	
+	if (type < 0 || type > bonusMaxHamList.size()) {
+		error("invalid type in CreatureObjectImplementation::addBonusMaxHAM");
+		return;
+	}
+
+	if (value == 0)
+		return;
+
+	int ham = bonusMaxHamList.get(type) + baseHAM.get(type);
+
+	ham *= (1 + value / 100.f);
+
+	int currentValue = maxHamList.get(type);
+	int newValue = currentValue + ham;
+
+	setMaxHAM(type, newValue, notifyClient);
+}
+
 void CreatureObjectImplementation::addEncumbrance(int type, int value,
 		bool notifyClient) {
 	if (type < 0 || type >= encumbrances.size()) {
@@ -1533,21 +1595,32 @@ void CreatureObjectImplementation::addSkillMod(const int modType, const String& 
 
 void CreatureObjectImplementation::checkForSpecialMods(String& modName, int value, int oldValue) {	
 	
-	if (modName == "health_mod") {
-		addMaxHAM(0, value * (1 + getSkillMod("increased_health") / 100.f));
+	if (modName.contains("attribute")) {
+		Vector<String> attributeNames = {"health", "strength", "constitution", "action", "quickness", "stamina", "mind", "focus", "willpower"};
+		if (modName.contains("increased")) {
+			String inc = "increased_attribute_";
+			for (int i = 0; i < attributeNames.size(); ++i) {
+
+				String attributeName = inc + attributeNames.get(i-1);
+				if (modName == attributeName) {
+					addIncreasedHAM(i-1, value, true);
+					break;
+				}
+			}
+		}
+		else if (modName.contains("max")) {
+			String inc = "max_attribute_";
+			for (int i = 0; i < attributeNames.size(); ++i) {
+
+				String attributeName = inc + attributeNames.get(i-1);
+				if (modName == attributeName) {
+					addBonusMaxHAM(i-1, value, true);
+					break;
+				}
+			}
+		}
 	}
 
-	else if (modName == "mind_mod") {
-		addMaxHAM(6, value * (1 + getSkillMod("increased_mind") / 100.f));
-	}
-
-	else if (modName == "increased_health") {
-		setMaxHAM(0, getMaxHAM(0) / (1 + oldValue / 100.f) * (1 + value / 100.f));
-	}
-
-	else if (modName == "increased_mind") {
-		setMaxHAM(6, getMaxHAM(0) / (1 + oldValue / 100.f) * (1 + value / 100.f));
-	}
 
 	// if (modName == "private_run_speed_mod") {
 	// 	updateRunSpeedMod(value);
@@ -2149,6 +2222,7 @@ void CreatureObjectImplementation::notifyLoadFromDatabase() {
 	getZoneServer()->getPlayerManager()->fixHAM(asCreatureObject());
 	getZoneServer()->getPlayerManager()->fixBuffSkillMods(asCreatureObject());
 
+
 	for (int i = 0; i < creatureBuffs.getBuffListSize(); ++i) {
 		ManagedReference<Buff*> buff = creatureBuffs.getBuffByIndex(i);
 
@@ -2182,6 +2256,8 @@ void CreatureObjectImplementation::notifyLoadFromDatabase() {
 	ghost->getSchematics()->addRewardedSchematics(ghost);
 
 	skillManager->updateXpLimits(ghost);
+
+	ghost->updateStats();
 
 	if (getZone() != nullptr)
 		ghost->setLinkDead();
@@ -2253,6 +2329,7 @@ int CreatureObjectImplementation::notifyObjectInserted(SceneObject* object) {
 			}
 		}
 	}
+
 	return TangibleObjectImplementation::notifyObjectInserted(object);
 }
 
@@ -2871,28 +2948,45 @@ void CreatureObjectImplementation::activateHAMRegeneration(int latency) {
 		modifier *= 1.75f;
 
 	// this formula gives the amount of regen per second
-	uint32 healthTick = (uint32) ceil((float) Math::max(0, getHAM(
-			CreatureAttribute::CONSTITUTION)) * 13.0f / 2100.0f * modifier * (1 + getSkillMod("health_regeneration") / 100.f));
+	//uint32 healthTick = (uint32) ceil((float) Math::max(0, getHAM(
+	//		CreatureAttribute::CONSTITUTION)) * 13.0f / 2100.0f * modifier * (1 + getSkillMod("health_regeneration") / 100.f));
+	uint32 healthTick = (uint32) ceil((float) Math::max(0, getHAM(CreatureAttribute::CONSTITUTION / 10.f * modifier)) + getSkillMod("health_regeneration"));
+	//uint32 healthTick = getSkillMod("health_regeneration");
+	int incHealthRegen = getSkillMod("increased_health_regeneration");
+	if (healthTick > 0)
+		healthTick *= (1 + incHealthRegen / 100.f);
 
 
 	// uint32 actionTick = (uint32) ceil((float) Math::max(0, getHAM(
 	// 		CreatureAttribute::STAMINA)) * 13.0f / 2100.0f * modifier);
-	uint32 mindTick = (uint32) ceil((float) Math::max(0, getHAM(
-			CreatureAttribute::WILLPOWER)) * 13.0f / 2100.0f * modifier * (1 + getSkillMod("mind_regeneration") / 100.f));
+	// uint32 mindTick = (uint32) ceil((float) Math::max(0, getHAM(
+	// 		CreatureAttribute::WILLPOWER)) * 13.0f / 2100.0f * modifier);
+
+	uint32 mindTick = (uint32) ceil((float) Math::max(0, getHAM(CreatureAttribute::FOCUS / 10.f * modifier)));
+
+	int flatMindRegen = getSkillMod("mind_regeneration");
+	if (flatMindRegen != 0)
+		mindTick += flatMindRegen;
+	
+	int incMindRegen = getSkillMod("increased_mind_regeneration");
+	if (mindTick > 0 && incMindRegen != 0)
+		mindTick *= (1 + incMindRegen / 100.f);
+
 
 	if (!isInCombat()) {
-		healthTick *= 5;
-		mindTick *= 2;
+			healthTick += getMaxHAM(CreatureAttribute::HEALTH) / 50.f;
+		
+			mindTick *= 2;
 	}
 
-	if (healthTick < 1)
-		healthTick = 1;
+	// if (healthTick < 1)
+	// 	healthTick = 0;
 
 	// if (actionTick < 1)
 	// 	actionTick = 1;
 
-	if (mindTick < 1)
-		mindTick = 1;
+	// if (mindTick < 1)
+	// 	mindTick = 0;
 
 	int action = getHAM(CreatureAttribute::ACTION);
 	if (action > 1 && !isInCombat()) {
