@@ -565,16 +565,26 @@ void CreatureObjectImplementation::setHeight(float height, bool notifyClient) {
 	broadcastMessage(msg, true);
 }
 
-void CreatureObjectImplementation::setShockWounds(int newShock,
-		bool notifyClient) {
+void CreatureObjectImplementation::setIncapacitationTimer(uint32 timer, bool notifyClient) {
+	cooldownTimerMap->updateToCurrentAndAddMili("incapTimer", timer*1000);
+
+	if (notifyClient) {
+		CreatureObjectDeltaMessage3* dcreo3 = new CreatureObjectDeltaMessage3(asCreatureObject());
+		dcreo3->updateIncapacitationRecoveryTime(timer);
+		dcreo3->close();
+
+		broadcastMessage(dcreo3, true);
+	}
+}
+
+void CreatureObjectImplementation::setShockWounds(int newShock, bool notifyClient) {
 	if (shockWounds == newShock)
 		return;
 
 	shockWounds = newShock;
 
 	if (notifyClient) {
-		CreatureObjectDeltaMessage3* dcreo3 = new CreatureObjectDeltaMessage3(
-				asCreatureObject());
+		CreatureObjectDeltaMessage3* dcreo3 = new CreatureObjectDeltaMessage3(asCreatureObject());
 		dcreo3->updateShockWounds();
 		dcreo3->close();
 
@@ -719,7 +729,7 @@ void CreatureObjectImplementation::setCombatState() {
 
 		CreatureObjectDeltaMessage3* dcreo3 = new CreatureObjectDeltaMessage3(asCreatureObject());
 		dcreo3->updateCreatureBitmask(getOptionsBitmask());
-		dcreo3->updateState();
+		dcreo3->updateStatesBitmask();
 		dcreo3->close();
 
 		broadcastMessage(dcreo3, true);
@@ -751,16 +761,15 @@ void CreatureObjectImplementation::clearCombatState(bool removedefenders) {
 
 		stateBitmask &= ~CreatureState::COMBAT;
 
-		CreatureObjectDeltaMessage3* dcreo3 = new CreatureObjectDeltaMessage3(
-				asCreatureObject());
+		CreatureObjectDeltaMessage3* dcreo3 = new CreatureObjectDeltaMessage3(asCreatureObject());
 		dcreo3->updateCreatureBitmask(getOptionsBitmask());
-		dcreo3->updateState();
+		dcreo3->updateStatesBitmask();
 		dcreo3->close();
 
 		broadcastMessage(dcreo3, true);
 	}
 
-	clearQueueActions(false);
+	clearQueueActions(true);
 
 	if (removedefenders)
 		removeDefenders();
@@ -813,9 +822,10 @@ bool CreatureObjectImplementation::setState(uint64 state, bool notifyClient) {
 					}
 
 					SitOnObject* soo = new SitOnObject(asCreatureObject(), getPositionX(), getPositionZ(), getPositionY());
+
 					CreatureObjectDeltaMessage3* dcreo3 = new CreatureObjectDeltaMessage3(asCreatureObject());
 					dcreo3->updatePosture();
-					dcreo3->updateState();
+					dcreo3->updateStatesBitmask();
 					dcreo3->close();
 
 #ifdef LOCKFREE_BCLIENT_BUFFERS
@@ -847,7 +857,7 @@ bool CreatureObjectImplementation::setState(uint64 state, bool notifyClient) {
 				}
 			} else {
 				CreatureObjectDeltaMessage3* dcreo3 = new CreatureObjectDeltaMessage3(asCreatureObject());
-				dcreo3->updateState();
+				dcreo3->updateStatesBitmask();
 				dcreo3->close();
 
 				broadcastMessage(dcreo3, true);
@@ -935,9 +945,8 @@ bool CreatureObjectImplementation::clearState(uint64 state, bool notifyClient) {
 		stateBitmask &= ~state;
 
 		if (notifyClient) {
-			CreatureObjectDeltaMessage3* dcreo3 =
-					new CreatureObjectDeltaMessage3(asCreatureObject());
-			dcreo3->updateState();
+			CreatureObjectDeltaMessage3* dcreo3 = new CreatureObjectDeltaMessage3(asCreatureObject());
+			dcreo3->updateStatesBitmask();
 			dcreo3->close();
 
 			broadcastMessage(dcreo3, true);
@@ -1159,7 +1168,7 @@ int CreatureObjectImplementation::healDamage(TangibleObject* healer, int damageT
 
 				if (pet != nullptr && player != nullptr) {
 					pet->setFollowObject(player);
-					pet->activateMovementEvent();
+					pet->activateAiBehavior();
 				}
 			}
 		}
@@ -1224,8 +1233,7 @@ void CreatureObjectImplementation::setBaseHAM(int type, int value,
 	}
 }
 
-void CreatureObjectImplementation::setWounds(int type, int value,
-		bool notifyClient) {
+void CreatureObjectImplementation::setWounds(int type, int value, bool notifyClient) {
 	if (value < 0)
 		value = 0;
 
@@ -1236,8 +1244,7 @@ void CreatureObjectImplementation::setWounds(int type, int value,
 		return;
 
 	if (notifyClient) {
-		CreatureObjectDeltaMessage3* msg = new CreatureObjectDeltaMessage3(
-				asCreatureObject());
+		CreatureObjectDeltaMessage3* msg = new CreatureObjectDeltaMessage3(asCreatureObject());
 		msg->startUpdate(0x11);
 		wounds.set(type, value, msg);
 		msg->close();
@@ -1726,7 +1733,6 @@ void CreatureObjectImplementation::updatePostures(bool immediate) {
 	// Failing to send this will result in the creature returning to it's previous posture after a CombatAction
 	CreatureObjectDeltaMessage3* dcreo3 = new CreatureObjectDeltaMessage3(asCreatureObject());
 	dcreo3->updatePosture();
-	//dcreo3->updateState();
 	dcreo3->close();
 
 	messages.add(dcreo3);
@@ -3645,13 +3651,11 @@ bool CreatureObjectImplementation::isHealableBy(CreatureObject* healerCreo) {
 	if (healerGhost == nullptr)
 		return false;
 
-	if (healerGhost->hasBhTef())
-		return false;
-
-	CreatureObject* thisCreo = asCreatureObject();
-
-	if (thisCreo == nullptr)
-		return false;
+	/* BH TEF should prevent incoming helpful actions to the TEFed individual, not prevent them helping others
+	* See Git History, this was implemented without proper evidence. All evidence states those with BH TEF cannot receive helpful actions.  -- Hakry
+	* if (healerGhost->hasBhTef())
+	*	return false;
+	*/
 
 	if (isPet()) {
 		auto linkedCreature = getLinkedCreature().get();
@@ -3661,11 +3665,11 @@ bool CreatureObjectImplementation::isHealableBy(CreatureObject* healerCreo) {
 		}
 	}
 
-	bool thisIsPlayer = thisCreo->isPlayerCreature();
-	PlayerObject* thisGhost = nullptr;
+	bool thisIsPlayer = isPlayerCreature();
+	bool factionChecks = healFactionChecks(healerCreo, thisIsPlayer);
 
 	if (thisIsPlayer) {
-		thisGhost = thisCreo->getPlayerObject();
+		PlayerObject* thisGhost = getPlayerObject();
 
 		if (thisGhost == nullptr)
 			return false;
@@ -3673,22 +3677,39 @@ bool CreatureObjectImplementation::isHealableBy(CreatureObject* healerCreo) {
 		if (thisGhost->isLinkDead() && healerGhost->getAccountID() == thisGhost->getAccountID() && !ConfigManager::instance()->getBool("Core3.CombatManager.AllowSameAccountLinkDeadBeneficialActions", true))
 			return false;
 
-		if (thisGhost->isInPvpArea(true) && getGroupID() != 0 && getGroupID() == thisCreo->getGroupID()) {
-			return true;
+		// In the same group
+		if (getGroupID() != 0 && getGroupID() == healerCreo->getGroupID()) {
+			if (thisGhost->isInPvpArea(true))
+				return true;
+		}
+
+		// This player has a BH TEF and cannot be healed.
+		if (thisGhost->hasBhTef()) {
+			return false;
 		}
 	}
 
-	uint32 thisFactionStatus = thisCreo->getFactionStatus();
+	return factionChecks;
+}
+
+bool CreatureObjectImplementation::healFactionChecks(CreatureObject* healerCreo, bool isPlayer) {
+	if (healerCreo == nullptr)
+		return false;
+
+	uint32 thisFactionStatus = getFactionStatus();
 	uint32 healerFactionStatus = healerCreo->getFactionStatus();
 	int thisFaction = getFaction();
 	int healerFaction = healerCreo->getFaction();
 
-	bool covertOvert =  ConfigManager::instance()->useCovertOvertSystem();
+	if (ConfigManager::instance()->useCovertOvertSystem()) {
+		// Only need to check against players. Faction mobs are prevented by the isAttackable Checks in the parent function
+		if (isPlayer) {
+			PlayerObject* thisGhost = getPlayerObject();
 
-	if (covertOvert) {
-		// Healer and thisCreature are different Factions/neutral and this creature is overt or has GCW Tef
-		if (thisFaction != healerFaction && (thisFactionStatus == FactionStatus::OVERT || (thisGhost != nullptr && thisGhost->hasGcwTef())))
-			return false;
+			// Healer and thisCreature are different Factions/neutral and this creature is overt or has GCW Tef
+			if (thisFaction != healerFaction && (thisFactionStatus == FactionStatus::OVERT || (thisGhost != nullptr && thisGhost->hasGcwTef())))
+				return false;
+		}
 	} else {
 		if (thisFaction != healerFaction && !(thisFactionStatus == FactionStatus::ONLEAVE))
 			return false;
@@ -3698,10 +3719,6 @@ bool CreatureObjectImplementation::isHealableBy(CreatureObject* healerCreo) {
 
 		if (!(thisFactionStatus == FactionStatus::ONLEAVE) && (healerFactionStatus == FactionStatus::ONLEAVE))
 			return false;
-	}
-
-	if (thisIsPlayer && thisGhost != nullptr && thisGhost->hasBhTef()) {
-		return false;
 	}
 
 	return true;

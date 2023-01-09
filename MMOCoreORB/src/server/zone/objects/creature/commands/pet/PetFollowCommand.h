@@ -60,22 +60,9 @@ public:
 		if (targetCreature == nullptr)
 			return GENERALERROR;
 
-		if (targetCreature != player && targetCreature->isAttackableBy(creature) && !CollisionManager::checkLineOfSight(player, targetObject)) {
+		if (targetCreature != player && (targetCreature->isAttackableBy(pet) || !CollisionManager::checkLineOfSight(player, targetCreature) || !playerEntryCheck(player, targetCreature)) ) {
 			pet->showFlyText("npc_reaction/flytext", "confused", 204, 0, 0); // "?!!?!?!"
 			return INVALIDTARGET;
-		}
-
-		Reference<CellObject*> targetCell = targetObject->getParent().get().castTo<CellObject*>();
-
-		if (targetCell != nullptr) {
-			auto perms = targetCell->getContainerPermissions();
-
-			if (!perms->hasInheritPermissionsFromParent()) {
-				if (!targetCell->checkContainerPermission(player, ContainerPermissions::WALKIN)) {
-					pet->showFlyText("npc_reaction/flytext", "confused", 204, 0, 0); // "?!!?!?!"
-					return INVALIDTARGET;
-				}
-			}
 		}
 
 		// Check if droid has power
@@ -94,8 +81,16 @@ public:
 		if (pet->isInCombat())
 			CombatManager::instance()->attemptPeace(pet);
 
+		Locker clocker(controlDevice, creature);
+		controlDevice->setLastCommandTarget(targetObject);
+		clocker.release();
+
 		pet->setFollowObject(targetObject);
 		pet->storeFollowObject();
+
+		if (pet->isResting()) {
+			pet->setMovementState(AiAgent::FOLLOWING);
+		}
 
 		pet->notifyObservers(ObserverEventType::STARTCOMBAT, pet->getLinkedCreature().get());
 

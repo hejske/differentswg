@@ -257,10 +257,7 @@ class CreatureObject extends TangibleObject {
 	public native void initializeTransientMembers();
 
 	@preLocked
-	public abstract void setCountdownTimer(unsigned int newCount, boolean notifyClient = true) {
-		super.setCountdownTimer(newCount, notifyClient);
-		cooldownTimerMap.updateToCurrentAndAddMili("incapTimer", getUseCount()*1000);
-	}
+	public native void setIncapacitationTimer(unsigned int newCount, boolean notifyClient = true);
 
 	/**
 	 * Sends a CommandQueueRemove ObjectControllerMessage to the owner client of this object
@@ -1092,6 +1089,9 @@ class CreatureObject extends TangibleObject {
 
 	@dirty
 	public native boolean isHealableBy(CreatureObject object);
+
+	@dirty
+	public native boolean healFactionChecks(CreatureObject object, boolean isPlayer);
 
 	@dirty
 	public native boolean isInvulnerable();

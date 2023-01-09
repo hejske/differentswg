@@ -53,10 +53,7 @@ class PlayerObject extends IntangibleObject {
 	protected int playerLogLevel;
 
 	@dereferenced
-	protected PlayerBitmasks playerBitmasks;
-
-	@dereferenced
-	protected transient PlayerBitmasks profileBitmasks;
+	protected PlayerBitmasks playerBitmask;
 
 	protected string title;
 
@@ -859,8 +856,6 @@ class PlayerObject extends IntangibleObject {
 
 	public native void doRecovery(int latency);
 
-	private native void checkForNewSpawns();
-
 	public native void disconnect(boolean closeClient, boolean doLock);
 
 	public native void reload(ZoneClientSession client);
@@ -1401,19 +1396,8 @@ class PlayerObject extends IntangibleObject {
 	@local
 	@read
 	public final PlayerBitmasks getPlayerBitmasks() {
-		return playerBitmasks;
+		return playerBitmask;
 	}
-
-	@local
-	@read
-	public final PlayerBitmasks getProfileBitmasks() {
-		return profileBitmasks;
-	}
-
-	/*@local
-	public DeltaVectorMap<string, int> getExperienceList() {
-		return experienceList;
-	}*/
 
 	@read
 	public string getTitle() {
@@ -1462,12 +1446,10 @@ class PlayerObject extends IntangibleObject {
 		return (adminLevel == 15 && hasAbility("admin"));
 	}
 
-	public native boolean setPlayerBitmask(unsigned int bit, boolean notifyClient = false);
-	public native boolean clearPlayerBitmask(unsigned int bit, boolean notifyClient = false);
+	public native boolean setPlayerBit(unsigned int bit, boolean notifyClient = false);
+	public native boolean clearPlayerBit(unsigned int bit, boolean notifyClient = false);
 	public native void toggleCharacterBit(unsigned int bit);
-	/**
-	 * is the player AFK
-	 */
+
 	@read
 	public native boolean isLFG();
 

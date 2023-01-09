@@ -87,10 +87,10 @@ public:
 	VectorMap<uint64, VectorMap<BehaviorTreeSlot, Reference<Behavior*> > > customMap;
 
 	AtomicInteger countExceptions;
-	AtomicInteger activeMoveEvents;
-	AtomicInteger scheduledMoveEvents;
-	AtomicInteger moveEventsWithFollowObject;
-	AtomicInteger moveEventsRetreating;
+	AtomicInteger activeBehaviorEvents;
+	AtomicInteger scheduledBehaviorEvents;
+	AtomicInteger behaviorsWithFollowObject;
+	AtomicInteger behaviorsRetreating;
 	AtomicInteger activeRecoveryEvents;
 
 	Mutex guard;
@@ -331,12 +331,12 @@ public:
 	const JSONSerializationType getStatsAsJSON() const {
 		JSONSerializationType json;
 
-		json["activeMoveEvents"] = activeMoveEvents.get();
+		json["activeBehaviorEvents"] = activeBehaviorEvents.get();
 		json["activeRecoveryEvents"] = activeRecoveryEvents.get();
 		json["countExceptions"] = countExceptions.get();
-		json["moveEventsRetreating"] = moveEventsRetreating.get();
-		json["moveEventsWithFollowObject"] = moveEventsWithFollowObject.get();
-		json["scheduledMoveEvents"] = scheduledMoveEvents.get();
+		json["behaviorsRetreating"] = behaviorsRetreating.get();
+		json["behaviorsWithFollowObject"] = behaviorsWithFollowObject.get();
+		json["scheduledMoveEvents"] = scheduledBehaviorEvents.get();
 
 		auto server = ServerCore::getZoneServer();
 
@@ -448,6 +448,8 @@ private:
 		_REGISTERLEAF(CheckStopResting);
 		_REGISTERLEAF(CheckQueueSize);
 		_REGISTERLEAF(CheckIsEscort);
+		_REGISTERLEAF(CheckHasRangedWeapon);
+		_REGISTERLEAF(CheckHasMeleeWeapon);
 		// action behaviors
 		_REGISTERLEAF(Dummy);
 		_REGISTERLEAF(GeneratePatrol);

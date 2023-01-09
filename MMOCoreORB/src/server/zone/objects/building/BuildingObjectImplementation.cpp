@@ -1425,7 +1425,7 @@ void BuildingObjectImplementation::createChildObjects() {
 				if (obj->isTurret() || obj->isMinefield())
 					obj->createChildObjects();
 
-				thisZone->transferObject(obj, -1, false);
+				thisZone->transferObject(obj, -1, true);
 			}
 
 			if (obj->isTurretControlTerminal()) {
@@ -1715,7 +1715,7 @@ void BuildingObjectImplementation::changeSign(const SignTemplate* signConfig) {
 	signObject->initializePosition(x, z, y);
 	signObject->setDirection(dir.rotate(Vector3(0, 1, 0), degrees));
 
-	getZone()->transferObject(signObject, -1, false);
+	getZone()->transferObject(signObject, -1, true);
 
 	// Set sign permissions
 	ContainerPermissions* permissions = signSceno->getContainerPermissionsForUpdate();

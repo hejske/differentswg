@@ -95,7 +95,10 @@ public:
 	}
 
 	Behavior::Status execute(AiAgent* agent, unsigned int startIdx = 0) const {
-		agent->clearQueueActions();
+		if (!agent->isInCombat())
+			return FAILURE;
+
+		agent->clearQueueActions(true);
 		agent->clearCombatState(clearDefenders);
 
 		return !agent->isInCombat() ? SUCCESS : FAILURE;
@@ -128,10 +131,11 @@ public:
 
 		uint32 weapon = agent->readBlackboard("stagedWeapon").get<uint32>();
 
-		if (weapon == DataVal::PRIMARYWEAPON)
+		if (weapon == DataVal::PRIMARYWEAPON) {
 			agent->equipPrimaryWeapon();
-		else if (weapon == DataVal::SECONDARYWEAPON)
+		} else if (weapon == DataVal::SECONDARYWEAPON) {
 			agent->equipSecondaryWeapon();
+		}
 
 		return SUCCESS;
 	}
@@ -630,7 +634,7 @@ public:
 		}
 
 		if (healTarget->getHAM(CreatureAttribute::HEALTH) < healTarget->getMaxHAM(CreatureAttribute::HEALTH) || healTarget->getHAM(CreatureAttribute::ACTION) < healTarget->getMaxHAM(CreatureAttribute::ACTION)) {
-			agent->clearQueueActions();
+			agent->clearQueueActions(true);
 
 			if (healTarget == agent) {
 				agent->healTarget(healTarget);

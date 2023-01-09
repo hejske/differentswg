@@ -140,6 +140,7 @@ void SceneObjectImplementation::initializePrivateData() {
 	originalObjectID = 0;
 
 	forceNoTrade = false;
+	debuggingRegions = false;
 }
 
 void SceneObjectImplementation::loadTemplateData(SharedObjectTemplate* templateData) {
@@ -1417,7 +1418,7 @@ void SceneObjectImplementation::createChildObjects() {
 				}
 			}
 
-			if (!getZoneUnsafe()->transferObject(obj, -1, false)) {
+			if (!getZoneUnsafe()->transferObject(obj, -1, true)) {
 				obj->destroyObjectFromDatabase(true);
 				continue;
 			}
@@ -2176,4 +2177,33 @@ void SceneObjectImplementation::getChildrenRecursive(SortedVector<uint64>& child
 
 String SceneObjectImplementation::getGameObjectTypeStringID() {
 	return SceneObjectType::typeToString(gameObjectType);
+}
+
+bool SceneObjectImplementation::isNearBank() {
+	Zone* zone = getZone();
+
+	if (zone != nullptr) {
+		SortedVector<QuadTreeEntry* > closeObjects;
+		zone->getInRangeObjects(getPositionX(), getPositionY(), 15.f, &closeObjects, true, false);
+
+		bool nearBank = false;
+
+		for (int i = 0; i < closeObjects.size(); ++i) {
+			SceneObject* sceneO = cast<SceneObject*>(closeObjects.get(i));
+
+			if (sceneO == nullptr)
+				continue;
+
+			if (sceneO->getGameObjectType() == SceneObjectType::BANK) {
+				nearBank = true;
+				break;
+			}
+		}
+
+		if (nearBank) {
+			return true;
+		}
+	}
+
+	return false;
 }

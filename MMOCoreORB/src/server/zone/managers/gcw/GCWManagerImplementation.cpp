@@ -568,28 +568,32 @@ void GCWManagerImplementation::spawnGcwControlBanners() {
 	luaSpawnCityControlBanners->callFunction();
 }
 
-bool GCWManagerImplementation::hasTooManyBasesNearby(int x, int y) {
+bool GCWManagerImplementation::hasTooManyBasesNearby(float x, float y) {
 	if (zone == nullptr)
 		return true;
 
-	SortedVector<QuadTreeEntry*> inRangeObjects;
-	zone->getInRangeObjects(x, y, nearbyBaseDistance, &inRangeObjects, true, false);
-	int count = 0;
+	SortedVector<QuadTreeEntry* > closeEntryObjects;
+	zone->getInRangeObjects(x, y, nearbyBaseDistance, &closeEntryObjects, true, false);
 
-	for (int i = 0; i < inRangeObjects.size(); ++i) {
-		SceneObject* scene = cast<SceneObject*>(inRangeObjects.get(i));
+	int count = 0;
+	uint32 tempStrucHash = STRING_HASHCODE("temporary_structure");
+
+	for (int i = 0; i < closeEntryObjects.size(); ++i) {
+		SceneObject* scene = cast<SceneObject*>(closeEntryObjects.get(i));
 
 		if (scene == nullptr)
 			continue;
 
-		if (scene->isGCWBase())
+		// Check for other bases or structures being placed
+		if (scene->isGCWBase() || (scene->isInstallationObject() && (scene->getObjectNameStringIdName().hashCode() == tempStrucHash)))
 			count++;
-	}
 
-	if (!allowBaseComplex && count > 0) {
-		return true;
-	} else if (allowBaseComplex && count >= baseComplexSize) {
-		return true;
+		// Stop iteration if the count breaks the config options
+		if (!allowBaseComplex && count > 0) {
+			return true;
+		} else if (allowBaseComplex && count >= baseComplexSize) {
+			return true;
+		}
 	}
 
 	return false;
@@ -1345,6 +1349,27 @@ bool GCWManagerImplementation::isFacilityRebooting(BuildingObject* building) {
 	}
 
 	return (baseData->getState() == DestructibleBuildingDataComponent::REBOOTSEQUENCE);
+}
+
+bool GCWManagerImplementation::isPlanetCapped() {
+	Locker locker(_this.getReferenceUnsafeStaticCast());
+
+	int totalBases = gcwBaseList.size();
+	int totalPlayerBases = 0;
+
+	for (int i = 0; i < totalBases; i++) {
+		Reference<BuildingObject*> base = getBase(i);
+
+		if (base == nullptr)
+			continue;
+
+		if (!(base->getFactionBaseType() == PLAYERFACTIONBASE))
+			continue;
+
+		totalPlayerBases++;
+	}
+
+	return maxBasesPerPlanet <= totalPlayerBases;
 }
 
 DestructibleBuildingDataComponent* GCWManagerImplementation::getDestructibleBuildingData(BuildingObject* building) {
@@ -3035,7 +3060,7 @@ uint64 GCWManagerImplementation::addChildInstallationFromDeed(BuildingObject* bu
 		}
 	}
 
-	zone->transferObject(obj, -1, false);
+	zone->transferObject(obj, -1, true);
 	building->getChildObjects()->put(obj);
 
 	return obj->getObjectID();
@@ -3319,7 +3344,7 @@ String GCWManagerImplementation::getCrackdownInfo(CreatureObject* player) const 
 			"\nScans enabled on this planet - " + String::valueOf(planetsWithWildScans.find(zone->getZoneName()) != Vector<String>::npos) +
 			"\nPlayer has no scan cooldown - " + String::valueOf(player->checkCooldownRecovery("crackdown_scan")) +
 			"\nPlayer outside - " + String::valueOf(player->getParentID() == 0 || player->isRidingMount()) +
-			"\nIs spawning permitted at the coordinates - " + String::valueOf(zone->getPlanetManager()->isSpawningPermittedAt(player->getWorldPositionX(), player->getWorldPositionY())) +
+			"\nIs spawning permitted at the coordinates - " + String::valueOf(zone->getPlanetManager()->isSpawningPermittedAt(player->getWorldPositionX(), player->getWorldPositionY(), 0)) +
 			"\nIs player privileged - " + String::valueOf(player->getPlayerObject()->isPrivileged());
 	}
 }
@@ -3383,7 +3408,7 @@ void GCWManagerImplementation::performCheckWildContrabandScanTask() {
 				continue;
 		}
 
-		if (zone->getPlanetManager()->isSpawningPermittedAt(player->getWorldPositionX(), player->getWorldPositionY()) && getWildScanChance() >= System::random(100)) {
+		if (zone->getPlanetManager()->isSpawningPermittedAt(player->getWorldPositionX(), player->getWorldPositionY(), 0) && getWildScanChance() >= System::random(100)) {
 			WildContrabandScanSession* wildContrabandScanSession = new WildContrabandScanSession(player, getWinningFactionDifficultyScaling());
 			wildContrabandScanSession->initializeSession();
 

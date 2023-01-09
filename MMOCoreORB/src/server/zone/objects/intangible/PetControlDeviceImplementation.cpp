@@ -27,6 +27,7 @@
 #include "server/chat/ChatManager.h"
 #include "server/zone/objects/player/FactionStatus.h"
 #include "server/zone/managers/frs/FrsManager.h"
+#include "server/zone/objects/creature/commands/QueueCommand.h"
 
 void PetControlDeviceImplementation::callObject(CreatureObject* player) {
 	if (player->isInCombat() || player->isDead() || player->isIncapacitated() || player->getPendingTask("tame_pet") != nullptr) {
@@ -283,8 +284,8 @@ void PetControlDeviceImplementation::callObject(CreatureObject* player) {
 		player->getCooldownTimerMap()->updateToCurrentAndAddMili("petCallOrStoreCooldown", 1000); // 1 sec
 	}
 
-	EnqueuePetCommand* enqueueCommand = new EnqueuePetCommand(pet, String("petFollow").toLowerCase().hashCode(), String::valueOf(player->getObjectID()), player->getObjectID(), 1);
-	enqueueCommand->execute();
+	EnqueuePetCommand* enqueueCommand = new EnqueuePetCommand(pet, String("petFollow").toLowerCase().hashCode(), String::valueOf(player->getObjectID()), player->getObjectID(), QueueCommand::NORMAL);
+	enqueueCommand->schedule(50);
 }
 
 int PetControlDeviceImplementation::handleObjectMenuSelect(CreatureObject* player, byte selectedID) {
@@ -733,7 +734,7 @@ void PetControlDeviceImplementation::destroyObjectFromDatabase(bool destroyConta
 				Zone* zone = getZone();
 
 				if (zone != nullptr)
-					zone->transferObject(object, -1, false);
+					zone->transferObject(object, -1, true);
 			}
 		}
 
@@ -959,7 +960,7 @@ void PetControlDeviceImplementation::fillAttributeList(AttributeListMessage* alm
 			alm->insertAttribute("creature_damage", String::valueOf(pet->getDamageMin()) + " - " + String::valueOf(pet->getDamageMax()));
 
 			if (petType == PetManager::CREATUREPET) {
-				const CreatureAttackMap* attMap = pet->getAttackMap();
+				const CreatureAttackMap* attMap = pet->getPrimaryAttackMap();
 
 				if (attMap != nullptr && attMap->size() > 0) {
 					String cmd = attMap->getCommand(0);
@@ -985,7 +986,6 @@ void PetControlDeviceImplementation::fillAttributeList(AttributeListMessage* alm
 					alm->insertAttribute("spec_atk_2", " ---");
 				}
 
-				// TODO set this up to check for the actual ranged weapon
 				if (pet->hasRangedWeapon())
 					alm->insertAttribute("dna_comp_ranged_attack", "Yes");
 				else

@@ -16,16 +16,16 @@ public:
 		const PlayerBitmasks* playerBits = ghost->getPlayerBitmasks();
 
 		for (int i = 0; i < 4; ++i) {
-			insertInt(playerBits->getBitmask(i));
+			uint32 bit = playerBits->getBitmask(i);
+			insertInt(bit);
 		}
 
 		// Profile Settings
 		insertInt(0x04);
-		const PlayerBitmasks* profileBits = ghost->getProfileBitmasks();
-
-		for (int i = 0; i < 4; ++i) {
-			insertInt(profileBits->getBitmask(i));
-		}
+		insertInt(0);
+		insertInt(0);
+		insertInt(0);
+		insertInt(0);
 
 		// Skill Title
 		insertAscii(ghost->getTitle());
