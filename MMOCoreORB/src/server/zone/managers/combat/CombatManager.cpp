@@ -234,7 +234,10 @@ int CombatManager::doCombatAction(CreatureObject* attacker, WeaponObject* weapon
 
 	damage = doTargetCombatAction(attacker, weapon, defenderObject, &targetDefenders, data, &shouldGcwCrackdownTef, &shouldGcwTef, &shouldBhTef, attackDamage, baseDamage, accuracy);
 
-	if (data.getCommand()->isAreaAction() || data.getCommand()->isConeAction()) {
+	bool areaAction = getAreaActionKaare(attacker, data);
+
+	// if (data.getCommand()->isAreaAction() || data.getCommand()->isConeAction()) {
+	if (areaAction) {
 		Reference<SortedVector<ManagedReference<TangibleObject*>>*> areaDefenders = getAreaTargets(attacker, weapon, defenderObject, data);
 
 		while (areaDefenders->size() > 0) {
@@ -334,16 +337,40 @@ int CombatManager::doCombatAction(CreatureObject* attacker, WeaponObject* weapon
 	return damage;
 }
 
+bool CombatManager::getAreaActionKaare(CreatureObject* attacker, const CreatureAttackData& data) const {
+	
+	bool areaAction = false;
+
+	const CombatQueueCommand* command = data.getCommand();
+
+	if (command == nullptr)
+		return areaAction;
+
+	if (attacker == nullptr)
+		return areaAction;
+
+	if (attacker->isPlayerCreature()) {
+		areaAction = command->getAreaAction(attacker, data);
+	}
+	else if (command->isAreaAction() || command->isConeAction()) {
+		areaAction = true;
+	}
+
+	return areaAction;
+}
+
 int CombatManager::getAccuracyKaare(CreatureObject* attacker, WeaponObject* weapon, const CreatureAttackData& data) const {
 
 	int accuracy = 0;
 
 	const CombatQueueCommand* command = data.getCommand();
 
-	if (command == nullptr) {
+	if (command == nullptr)
 		return 0;
-	}
-
+	
+	if (attacker == nullptr)
+		return 0;
+	
 	accuracy = command->getAccuracy(attacker, weapon, data);
 
 	return accuracy;
@@ -356,9 +383,11 @@ int CombatManager::getDamageKaare(CreatureObject* attacker, WeaponObject* weapon
 
 	const CombatQueueCommand* command = data.getCommand();
 
-	if (command == nullptr) {
+	if (command == nullptr)
 		return 0;
-	}
+
+	if (attacker == nullptr)
+		return 0;
 
 	if (attacker->isPlayerCreature()) {
 		damage = command->getDamage(attacker, weapon, data, base);
@@ -1020,49 +1049,76 @@ Reference<SortedVector<ManagedReference<TangibleObject*>>*> CombatManager::getAr
 
 	PlayerManager* playerManager = zone->getZoneServer()->getPlayerManager();
 
-	int damage = 0;
-	int increasedAreaOfEffect = 0;
-	if (attacker->isPlayerCreature()) {
-		ManagedReference<CreatureObject*> player = attacker->asCreatureObject();
-		if (player != nullptr) {
-			increasedAreaOfEffect = player->getSkillMod("increased_area_of_effect");
-			if (data.isForceAttack()) {
-				increasedAreaOfEffect += player->getSkillMod("increased_force_area_of_effect");
-			}
-			else {
-				increasedAreaOfEffect += player->getSkillMod("increased_weapon_area_of_effect");
-			}
-		}
-	}
+	// int damage = 0;
+	// int increasedAreaOfEffect = 0;
+	// if (attacker->isPlayerCreature()) {
+	// 	ManagedReference<CreatureObject*> player = attacker->asCreatureObject();
+	// 	if (player != nullptr) {
+	// 		increasedAreaOfEffect = player->getSkillMod("increased_area_of_effect");
+	// 		if (data.isForceAttack()) {
+	// 			increasedAreaOfEffect += player->getSkillMod("increased_force_area_of_effect");
+	// 		}
+	// 		else {
+	// 			increasedAreaOfEffect += player->getSkillMod("increased_weapon_area_of_effect");
+	// 		}
+	// 	}
+	// }
 
-	int areaRange = data.getAreaRange();
-	if (increasedAreaOfEffect != 0 && areaRange > 0)
-		areaRange *= (1 + increasedAreaOfEffect / 100.f);
+	//int damage = 0;
+	
+	const CombatQueueCommand* command = data.getCommand();
 
+	int areaRange = 0;
 	int range = areaRange;
 
-	if (data.getCommand()->isConeAction()) {
-		int coneRange = data.getConeRange();
+	if (attacker->isPlayerCreature()) {
+		ManagedReference<CreatureObject*> playerCreo = cast<CreatureObject*>(attacker);
+		if (playerCreo != nullptr) {
+			areaRange = command->getAreaSize(playerCreo);
+			range = areaRange;
 
-		if (increasedAreaOfEffect != 0 && coneRange > 0)
-			coneRange *= (1 + increasedAreaOfEffect / 100.f);
+			if (command->isCone(playerCreo)) {
+				int coneRange = command->getConeSize(playerCreo);
 
-		if (coneRange > -1) {
-			range = coneRange;
-		} else {
-			range = data.getRange();
+				if (coneRange > -1) {
+					range = coneRange;
+				} else {
+					range = command->getRangeSize(playerCreo);
+				}
+			}
+
+			if (range < 0) {
+				range = weapon->getMaxRange();
+			}
+
+			if (command->isSplash(playerCreo))
+				range += command->getRangeSize(playerCreo);
 		}
 	}
+	else {
+		areaRange = data.getAreaRange();
+		range = areaRange;
 
-	if (range < 0) {
-		range = weapon->getMaxRange();
+		if (command->isConeAction()) {
+			int coneRange = data.getConeRange();
+
+			if (coneRange > -1) {
+				range = coneRange;
+			} else {
+				range = data.getRange();
+			}
+		}
+
+		if (range < 0) {
+			range = weapon->getMaxRange();
+		}
+
+		if (data.isSplashDamage())
+			range += data.getRange();
 	}
 
-	if (data.isSplashDamage())
-		range += data.getRange();
-
 	if (weapon->isThrownWeapon() || weapon->isHeavyWeapon())
-		range = weapon->getMaxRange() + areaRange;
+	range = weapon->getMaxRange() + areaRange;
 
 	try {
 		// zone->rlock();
@@ -2786,8 +2842,6 @@ int CombatManager::getArmorReduction(TangibleObject* attacker, WeaponObject* wea
 		damageType = data.getDamageType();
 	}
 
-	//weapon bonus damage, this is some messy shit need to fix lul
-
 	if (defender->isAiAgent()) {
 		float armorReduction = getArmorNpcReduction(cast<AiAgent*>(defender), damageType);
 		float armorLevel = cast<AiAgent*>(defender)->getArmor();
@@ -2869,63 +2923,80 @@ int CombatManager::getArmorReduction(TangibleObject* attacker, WeaponObject* wea
 		}
 	}
 
+
+	//new con loss system? O.O
 	ManagedReference<PlayerObject*> playerO = cast<PlayerObject*>(defender);
 	if (playerO != nullptr) {
 		damage *= getResistance(playerO, damageType);
+
+		if (!attacker->isPlayerCreature()) {
+
+			const WearablesDeltaVector* deltaVec = defender->getWearablesDeltaVector();
+			
+			ManagedReference<TangibleObject*> wearable = deltaVec->get(System::random(deltaVec->size() - 1));
+
+			int duraDmg = 1;
+
+			if (wearable->isArmorObject()) {
+				duraDmg = 10;
+			}
+			
+			wearable->inflictDamage(wearable, 0, duraDmg, true, true);
+		}
 	}
 
 	// PSG
-	ManagedReference<ArmorObject*> psg = getPSGArmor(defender);
+	// ManagedReference<ArmorObject*> psg = getPSGArmor(defender);
 
-	if (psg != nullptr && !psg->isVulnerable(damageType)) {
-		// float armorReduction = getArmorObjectReduction(psg, damageType);
-		// float dmgAbsorbed = damage;
+	// if (psg != nullptr && !psg->isVulnerable(damageType)) {
+	// 	// float armorReduction = getArmorObjectReduction(psg, damageType);
+	// 	// float dmgAbsorbed = damage;
 
-		// damage *= getArmorPiercing(psg, armorPiercing);
+	// 	// damage *= getArmorPiercing(psg, armorPiercing);
 
-		// if (armorReduction > 0)
-		// 	damage *= 1.f - (armorReduction / 100.f);
+	// 	// if (armorReduction > 0)
+	// 	// 	damage *= 1.f - (armorReduction / 100.f);
 
-		// dmgAbsorbed -= damage;
-		// if (dmgAbsorbed > 0) {
-		// 	int psgMit = hitList->getPsgMitigation();
+	// 	// dmgAbsorbed -= damage;
+	// 	// if (dmgAbsorbed > 0) {
+	// 	// 	int psgMit = hitList->getPsgMitigation();
 
-		// 	psgMit += dmgAbsorbed;
-		// 	hitList->setPsgMitigation(psgMit);
-		// }
+	// 	// 	psgMit += dmgAbsorbed;
+	// 	// 	hitList->setPsgMitigation(psgMit);
+	// 	// }
 
-		Locker plocker(psg);
+	// 	Locker plocker(psg);
 
-		psg->inflictDamage(psg, 0, originalDamage * 0.01, true, true);
-	}
+	// 	psg->inflictDamage(psg, 0, originalDamage * 0.01, true, true);
+	// }
 
-	// Standard Armor
-	ManagedReference<ArmorObject*> armor = nullptr;
+	// // Standard Armor
+	// ManagedReference<ArmorObject*> armor = nullptr;
 
-	armor = getArmorObject(defender, hitLocation);
+	// armor = getArmorObject(defender, hitLocation);
 
-	if (armor != nullptr) {// && !armor->isVulnerable(damageType)) {
-		// float armorReduction = getArmorObjectReduction(armor, damageType);
-		// float dmgAbsorbed = damage;
+	// if (armor != nullptr) {// && !armor->isVulnerable(damageType)) {
+	// 	// float armorReduction = getArmorObjectReduction(armor, damageType);
+	// 	// float dmgAbsorbed = damage;
 
-		// // use only the damage applied to the armor for piercing (after the PSG takes some off)
-		// damage *= getArmorPiercing(armor, armorPiercing);
+	// 	// // use only the damage applied to the armor for piercing (after the PSG takes some off)
+	// 	// damage *= getArmorPiercing(armor, armorPiercing);
 
-		// if (armorReduction > 0) {
-		// 	damage *= (1.f - (armorReduction / 100.f));
-		// 	dmgAbsorbed -= damage;
+	// 	// if (armorReduction > 0) {
+	// 	// 	damage *= (1.f - (armorReduction / 100.f));
+	// 	// 	dmgAbsorbed -= damage;
 
-		// 	int armorMit = hitList->getArmorMitigation();
+	// 	// 	int armorMit = hitList->getArmorMitigation();
 
-		// 	armorMit += dmgAbsorbed;
-		// 	hitList->setArmorMitigation(armorMit);
-		// }
+	// 	// 	armorMit += dmgAbsorbed;
+	// 	// 	hitList->setArmorMitigation(armorMit);
+	// 	// }
 
-		// inflict condition damage
-		Locker alocker(armor);
+	// 	// inflict condition damage
+	// 	Locker alocker(armor);
 
-		armor->inflictDamage(armor, 0, originalDamage * 0.05, true, true);
-	}
+	// 	armor->inflictDamage(armor, 0, originalDamage * 0.05, true, true);
+	// }
 
 
 	return damage;
@@ -4158,4 +4229,361 @@ void CombatManager::initializeDefaultAttacks() {
 	defaultMeleeAttacks.add(STRING_HASHCODE("attack_low_left_medium_3"));
 	defaultMeleeAttacks.add(STRING_HASHCODE("attack_low_right_medium_3"));
 	defaultMeleeAttacks.add(STRING_HASHCODE("attack_low_center_medium_3"));
+}
+
+int CombatManager::getWeaponCritChance(CreatureObject* creo, WeaponObject* weapon) const {
+	
+	if (weapon == nullptr || creo == nullptr) {
+		return 0;
+	}
+
+	int critChance = 0;
+
+	switch (weapon->getGameObjectType()) {
+		case SceneObjectType::ONEHANDMELEEWEAPON:
+		critChance = creo->getSkillMod("increased_one_hand_critical_chance");
+		break;
+	case SceneObjectType::TWOHANDMELEEWEAPON:
+		critChance = creo->getSkillMod("increased_two_hand_critical_chance");
+		break;
+	case SceneObjectType::WEAPON:
+	case SceneObjectType::MELEEWEAPON:
+		critChance = creo->getSkillMod("increased_unarmed_critical_chance");
+		break;
+	case SceneObjectType::RIFLE:
+		critChance = creo->getSkillMod("increased_rifle_critical_chance");
+		break;
+	case SceneObjectType::PISTOL:
+		critChance = creo->getSkillMod("increased_pistol_critical_chance");
+		break;
+	case SceneObjectType::CARBINE:
+		critChance = creo->getSkillMod("increased_carbine_critical_chance");
+		break;
+	case SceneObjectType::POLEARM:
+		critChance = creo->getSkillMod("increased_polearm_critical_chance");
+		break;
+	case SceneObjectType::THROWNWEAPON:
+		critChance = creo->getSkillMod("increased_thrown_critical_chance");
+		break;
+	case SceneObjectType::MINE:
+	case SceneObjectType::SPECIALHEAVYWEAPON:
+	case SceneObjectType::HEAVYWEAPON:
+		critChance = creo->getSkillMod("increased_heavy_weapon_critical_chance");
+		break;
+	default:
+		critChance = creo->getSkillMod("increased_unarmed_critical_chance");
+		break;
+	}
+
+	if (weapon->isJediWeapon()) {
+		critChance = creo->getSkillMod("lightsaber_critical_chance");
+	}
+
+	return critChance;
+}
+
+int CombatManager::getWeaponIncreasedDamage(CreatureObject* creo, WeaponObject* weapon)  const {
+
+	if (weapon == nullptr || creo == nullptr) {
+		return 0;
+	}
+
+	int increasedDamage = 0;
+
+	switch (weapon->getGameObjectType()) {
+		case SceneObjectType::ONEHANDMELEEWEAPON:
+		increasedDamage = creo->getSkillMod("increased_one_hand_damage");
+		break;
+	case SceneObjectType::TWOHANDMELEEWEAPON:
+		increasedDamage = creo->getSkillMod("increased_two_hand_damage");
+		break;
+	case SceneObjectType::WEAPON:
+	case SceneObjectType::MELEEWEAPON:
+		increasedDamage = creo->getSkillMod("increased_unarmed_damage");
+		break;
+	case SceneObjectType::RIFLE:
+		increasedDamage = creo->getSkillMod("increased_rifle_damage");
+		break;
+	case SceneObjectType::PISTOL:
+		increasedDamage = creo->getSkillMod("increased_pistol_damage");
+		break;
+	case SceneObjectType::CARBINE:
+		increasedDamage = creo->getSkillMod("increased_carbine_damage");
+		break;
+	case SceneObjectType::POLEARM:
+		increasedDamage = creo->getSkillMod("increased_polearm_damage");
+		break;
+	case SceneObjectType::THROWNWEAPON:
+		increasedDamage = creo->getSkillMod("increased_thrown_damage");
+		break;
+	case SceneObjectType::MINE:
+	case SceneObjectType::SPECIALHEAVYWEAPON:
+	case SceneObjectType::HEAVYWEAPON:
+		increasedDamage = creo->getSkillMod("increased_heavy_weapon_damage");
+		break;
+	default:
+		increasedDamage = creo->getSkillMod("increased_unarmed_damage");
+		break;
+	}
+
+	if (weapon->isJediWeapon()) {
+		increasedDamage = creo->getSkillMod("increased_lightsaber_damage");
+	}
+
+	return increasedDamage;
+}
+
+float CombatManager::getWeaponCritDamage(CreatureObject* creo, WeaponObject* weapon) const {
+
+	if (weapon == nullptr || creo == nullptr) {
+		return 0;
+	}
+
+	int critMulti = 0;
+
+	switch (weapon->getGameObjectType()) {
+		case SceneObjectType::ONEHANDMELEEWEAPON:
+		critMulti = creo->getSkillMod("one_hand_critical_damage");
+		break;
+	case SceneObjectType::TWOHANDMELEEWEAPON:
+		critMulti = creo->getSkillMod("two_hand_critical_damage");
+		break;
+	case SceneObjectType::WEAPON:
+	case SceneObjectType::MELEEWEAPON:
+		critMulti = creo->getSkillMod("unarmed_critical_damage");
+		break;
+	case SceneObjectType::RIFLE:
+		critMulti = creo->getSkillMod("rifle_critical_damage");
+		break;
+	case SceneObjectType::PISTOL:
+		critMulti = creo->getSkillMod("pistol_critical_damage");
+		break;
+	case SceneObjectType::CARBINE:
+		critMulti = creo->getSkillMod("carbine_critical_damage");
+		break;
+	case SceneObjectType::POLEARM:
+		critMulti = creo->getSkillMod("polearm_critical_damage");
+		break;
+	case SceneObjectType::THROWNWEAPON:
+		critMulti = creo->getSkillMod("thrown_critical_damage");
+		break;
+	case SceneObjectType::MINE:
+	case SceneObjectType::SPECIALHEAVYWEAPON:
+	case SceneObjectType::HEAVYWEAPON:
+		critMulti = creo->getSkillMod("heavy_weapon_critical_damage");
+		break;
+	default:
+		critMulti = creo->getSkillMod("unarmed_critical_damage");
+		break;
+	}
+
+	if (weapon->isJediWeapon()) {
+		critMulti = creo->getSkillMod("lightsaber_critical_damage");
+	}
+	
+	return critMulti;
+}
+
+bool CombatManager::getCriticalChance(CreatureObject* creo, WeaponObject* weapon, int bonusCrit, int increasedBonusCrit, int increasedTotalCrit) const {
+
+	if (weapon == nullptr || creo == nullptr) {
+		return false;
+	}
+
+	if (System::random(100) < (((weapon->getCritChance() + bonusCrit) * (1 + ((creo->getSkillMod("increased_critical_chance") + getWeaponCritChance(creo, weapon))) / 100.f)) * (1 + increasedTotalCrit / 100.f) + 1.f)) {
+		return true;
+	}
+
+	return false;
+}
+
+float CombatManager::getCriticalDamage(CreatureObject* creo, WeaponObject* weapon, int bonusCritDamage, int increasedTotalCritDamage) const {
+
+	if (weapon == nullptr || creo == nullptr) {
+		return 0;
+	}
+
+	float damageMulti = (1.5 + ((creo->getSkillMod("increased_critical_damage") + getWeaponCritDamage(creo, weapon) + bonusCritDamage)) / 100.f) * (1 + increasedTotalCritDamage / 100.f);
+
+	return damageMulti;
+}
+
+bool CombatManager::getForceCriticalChance(CreatureObject* creo, int bonusCrit, int increasedBonusCrit, int increasedTotalCrit) const {
+
+	if (creo == nullptr) {
+		return false;
+	}
+
+	if (System::random(100) < ((5 + creo->getSkillMod("base_force_critical_chance") + bonusCrit) * (1 + ((increasedBonusCrit + (creo->getSkillMod("increased_critical_chance") + creo->getSkillMod("increased_force_critical_chance"))) / 100.f)) * (1 + increasedTotalCrit / 100.f) + 1.f)) {
+		return true;
+	}
+	return false;
+}
+
+float CombatManager::getForceCriticalDamage(CreatureObject* creo, int bonusCritDamage, int increasedTotalCritDamage) const {
+
+	if (creo == nullptr) {
+		return 0;
+	}
+
+	float damageMulti = (1.5 + ((creo->getSkillMod("increased_critical_damage")) + bonusCritDamage + creo->getSkillMod("increased_force_critical_damage")) / 100.f) * (1 + increasedTotalCritDamage / 100);
+
+	return damageMulti;
+}
+
+int CombatManager::getDamage(CreatureObject* creo, WeaponObject* weapon, const CreatureAttackData& data, bool base, float bonusDmgMulti, int bonusMinDamage, int bonusMaxDamage, int bonusCrit, int increasedBonusCrit, int bonusCritDamage, int increasedTotalCrit, int increasedTotalCritDamage) const {
+
+	if (creo == nullptr)
+		return 0;
+
+
+	int damage = 0;
+	float minDamage = 0;
+	float maxDamage = 0;
+	int diff = 0;
+
+	int strengthBonus = creo->getHAM(CreatureAttribute::STRENGTH) / 20.f;
+
+	if (data.isForceAttack()) {
+		minDamage = data.getMinDamage();
+		maxDamage = data.getMaxDamage();
+
+		float multi = data.getForcePowersDamageScaling();
+		if (multi > 0) {
+			int powersDamage = creo->getSkillMod("force_powers_damage");
+			if (powersDamage > 0) {
+				minDamage += powersDamage * multi;
+				maxDamage += powersDamage * multi;
+			}
+		}
+
+	}
+	else if (weapon != nullptr) {
+		minDamage = weapon->getMinDamage();
+		maxDamage = weapon->getMaxDamage();
+	}
+	
+	minDamage += bonusMinDamage;
+	maxDamage += bonusMaxDamage;
+
+	damage = minDamage;
+	diff = maxDamage - minDamage + strengthBonus;
+	
+	if (diff > 0)
+		damage += System::random(diff);
+	
+	int increasedDamage = creo->getSkillMod("increased_damage") + strengthBonus; //strength damage inc
+
+	if (base) {
+		return damage;
+	}
+
+	if (data.isForceAttack()) {
+		increasedDamage += creo->getSkillMod("increased_force_damage");
+		if (increasedDamage > 0) {
+			damage *= (1 + (increasedDamage) / 100.f);
+		}
+		if (getForceCriticalChance(creo, bonusCrit, increasedBonusCrit, increasedTotalCrit)) {
+			damage *= getForceCriticalDamage(creo, bonusCritDamage, increasedTotalCritDamage);
+		}
+	}
+	else {
+		increasedDamage += getWeaponIncreasedDamage(creo, weapon);
+		if (increasedDamage > 0) {
+			damage *=(1 + (increasedDamage) / 100.f);
+		}
+		if (getCriticalChance(creo, weapon, bonusCrit, increasedBonusCrit, increasedTotalCrit)) {
+			damage *= getCriticalDamage(creo, weapon, bonusCritDamage, increasedTotalCritDamage);
+		}
+	}
+
+	return damage;
+}
+
+float CombatManager::getArmorPenetration(CreatureObject* creo, WeaponObject* weapon, const CreatureAttackData& data, float bonusBaseArp, int bonusIncreaseArp, int bonusTotalArp) const {
+
+	float armorPenetration = bonusBaseArp;
+
+	int armorPenModInc = creo->getSkillMod("increased_armor_penetration") + bonusIncreaseArp;
+
+	if (data.isForceAttack()) {
+		armorPenetration += creo->getSkillMod("base_force_armor_penetration");
+		armorPenModInc += creo->getSkillMod("increased_force_armor_penetration");
+	}
+	else {
+		armorPenetration += weapon->getArmorPenetration();
+	}
+	
+	if (armorPenModInc > 0)
+		armorPenetration *= (1 + armorPenModInc / 100.f);
+	int armorPenModMore = creo->getSkillMod("more_armor_penetration");
+	if (armorPenModMore > 0)
+		armorPenetration *= (1 + armorPenModMore / 100.f);
+	if (bonusTotalArp > 0) {
+		armorPenetration *= (1 + bonusTotalArp / 100.f);
+	}
+
+	return armorPenetration;
+}
+
+int CombatManager::getAccuracy(CreatureObject* creo, WeaponObject* weapon, const CreatureAttackData& data, int bonusAccuracy, int bonusIncreaseAccuracy, int totalBonusAccuracy) const {
+
+	if (creo == nullptr) {
+		return 0;
+	}
+
+	int accuracy = 0;
+
+	if (data.isForceAttack()) {
+		if (creo->isPlayerCreature()) {
+			accuracy += creo->getSkillMod("accuracy") + bonusAccuracy + creo->getHAM(CreatureAttribute::QUICKNESS) / 20.f;
+			accuracy += creo->getSkillMod("force_accuracy");
+			accuracy *= (1 + (creo->getSkillMod("increased_force_accuracy") + creo->getSkillMod("increased_accuracy")) / 100.f) * (1 + totalBonusAccuracy / 100.f);
+
+		}
+		else if (creo->isAiAgent()) {
+			accuracy += 50 + creo->asAiAgent()->getLevel();
+			if (creo->isPet()) {
+				ManagedReference<CreatureObject*> petMaster = creo->getLinkedCreature().get();
+				if (petMaster != nullptr) {
+					accuracy += petMaster->getSkillMod("pet_accuracy");
+					int incPetAcc = petMaster->getSkillMod("increased_pet_accuracy");
+					if (incPetAcc > 0 ) {
+						accuracy *= (1 + (incPetAcc / 100.f));
+					}
+				}	
+			}
+		}
+		return accuracy;
+	}
+	else {
+		if (weapon->getAttackType() == SharedWeaponObjectTemplate::RANGEDATTACK)
+			accuracy += creo->getSkillMod("private_aim");
+
+		accuracy += getAttackerAccuracyBonus(creo, weapon);
+		
+		accuracy += calculatePostureModifier(creo, weapon);
+
+		accuracy += getAttackerAccuracyModifier(creo, weapon);
+
+		if (creo->isPlayerCreature()) {
+			accuracy += creo->getSkillMod("accuracy") + bonusAccuracy + creo->getHAM(CreatureAttribute::QUICKNESS) / 20.f;
+			
+			accuracy *= (1 + (creo->getSkillMod("increased_weapon_accuracy") + creo->getSkillMod("increased_accuracy")) / 100.f) * (1 + totalBonusAccuracy / 100.f);
+
+		}
+		else if (creo->isPet()) {
+			ManagedReference<CreatureObject*> petMaster = creo->getLinkedCreature().get();
+			if (petMaster != nullptr) {
+				accuracy += petMaster->getSkillMod("pet_accuracy");
+				int incPetAcc = petMaster->getSkillMod("increased_pet_accuracy");
+				if (incPetAcc > 0 ) {
+					accuracy *= (1 + (incPetAcc / 100.f));
+				}
+			}	
+		}
+
+	}
+
+	return accuracy;
 }

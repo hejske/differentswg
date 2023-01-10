@@ -167,18 +167,18 @@ public:
 
 	//all the combat math will go here
 protected:
-	int doTargetCombatAction(CreatureObject* attacker, WeaponObject* weapon, TangibleObject* defenderObject, SortedVector<DefenderHitList*>* targetDefenders, const CreatureAttackData& data, bool* shouldGcwCrackdownTef, bool* shouldGcwTef, bool* shouldBhTef, bool crit = false) const;
-	int creoTargetCombatAction(CreatureObject* attacker, WeaponObject* weapon, CreatureObject* defenderObject, DefenderHitList* defenderHitList, const CreatureAttackData& data, bool* shouldGcwCrackdownTef, bool* shouldGcwTef, bool* shouldBhTef, bool crit = false) const;
+	int doTargetCombatAction(CreatureObject* attacker, WeaponObject* weapon, TangibleObject* defenderObject, SortedVector<DefenderHitList*>* targetDefenders, const CreatureAttackData& data, bool* shouldGcwCrackdownTef, bool* shouldGcwTef, bool* shouldBhTef, int attackDamage = 0, int unmitDamage = 0, int accuracy = 0) const;
+	int creoTargetCombatAction(CreatureObject* attacker, WeaponObject* weapon, CreatureObject* defenderObject, DefenderHitList* defenderHitList, const CreatureAttackData& data, bool* shouldGcwCrackdownTef, bool* shouldGcwTef, bool* shouldBhTef, int attackDamage = 0, int unmitDamage = 0, int accuracy = 0) const;
 
 	int doTargetCombatAction(TangibleObject* attacker, WeaponObject* weapon, TangibleObject* tano, SortedVector<DefenderHitList*>* targetDefenders, const CreatureAttackData& data) const;
 	int tanoTargetCombatAction(TangibleObject* attacker, WeaponObject* weapon, CreatureObject* defenderObject, DefenderHitList* hitList, const CreatureAttackData& data) const;
 
 	float calculateDamage(CreatureObject* attacker, WeaponObject* weapon, CreatureObject* defender, const CreatureAttackData& data) const;
 	float calculateDamage(TangibleObject* attacker, WeaponObject* weapon, CreatureObject* defender, const CreatureAttackData& data) const;
-	float calculateDamage(CreatureObject* attacker, WeaponObject* weapon, TangibleObject* defender, const CreatureAttackData& data, bool crit = false) const;
+	float calculateDamage(CreatureObject* attacker, WeaponObject* weapon, TangibleObject* defender, const CreatureAttackData& data) const;
 	int calculateDamageRange(TangibleObject* attacker, CreatureObject* defender, WeaponObject* weapon) const;
 	float applyDamageModifiers(CreatureObject* attacker, WeaponObject* weapon, float damage, const CreatureAttackData& data) const;
-
+	
 
 	/**
 	 * returns bitmask with what pools to damage
@@ -192,7 +192,7 @@ protected:
 	void applyWeaponDots(CreatureObject* attacker, CreatureObject* defender, WeaponObject* weapon) const;
 	uint8 getPoolForDot(uint64 dotType, int poolsToDamage) const;
 
-	int getAttackerAccuracyModifier(TangibleObject* attacker, CreatureObject* defender, WeaponObject* weapon) const;
+	int getAttackerAccuracyModifier(TangibleObject* attacker, WeaponObject* weapon) const;
 	int getAttackerAccuracyBonus(CreatureObject* attacker, WeaponObject* weapon) const;
 	int calculatePostureModifier(CreatureObject* creature, WeaponObject* weapon) const;
 	int calculateTargetPostureModifier(WeaponObject* weapon, CreatureObject* targetCreature) const;
@@ -233,17 +233,17 @@ protected:
 
 	float getResistance(PlayerObject* defender, int damageType) const;
 
-	int getWeaponSpecificCriticalDamage(CreatureObject* attacker, WeaponObject* weapon) const;
+	// int getWeaponSpecificCriticalDamage(CreatureObject* attacker, WeaponObject* weapon) const;
 
-	int getWeaponSpecificCriticalChance(CreatureObject* attacker, WeaponObject* weapon) const;
+	// int getWeaponSpecificCriticalChance(CreatureObject* attacker, WeaponObject* weapon) const;
 
-	bool getWeaponCriticalChance(CreatureObject* attacker) const;
+	// bool getWeaponCriticalChance(CreatureObject* attacker) const;
 
-	float getWeaponCriticalDamage(CreatureObject* attacker) const;
+	// float getWeaponCriticalDamage(CreatureObject* attacker) const;
 	
-	bool getForceCriticalChance(CreatureObject* attacker) const;
+	// bool ForceCriticalChance(CreatureObject* attacker) const;
 
-	float getForceCriticalDamage(CreatureObject* attacker) const;
+	// float getForceCriticalDamage(CreatureObject* attacker) const;
 
 	int getWeaponSpecificIncreasedDamage(CreatureObject* attacker) const;
 
@@ -251,10 +251,41 @@ protected:
 
 	void calculatePetDamageIncreases(CreatureObject* attacker, int damage) const;
 
-	void calculateKaareDamage(CreatureObject* attacker, CreatureObject* defender, WeaponObject* weapon, float damage, const CreatureAttackData& data, bool crit = false) const;
+	void calculateKaareDamage(CreatureObject* attacker, CreatureObject* defender, WeaponObject* weapon, float damage, const CreatureAttackData& data) const;
 
 	void calculateKaareDotDamage(CreatureObject* attacker, CreatureObject* defender, int damage, uint32 dotType) const;
 
+	int getDamageKaare(CreatureObject* attacker, WeaponObject* weapon, const CreatureAttackData& data, bool base = false) const;
+
+	int getAccuracyKaare(CreatureObject* attacker, WeaponObject* weapon, const CreatureAttackData& data) const;
+
+	int applyCreoDamageToTano(CreatureObject* attacker, WeaponObject* weapon, TangibleObject* defender, DefenderHitList* defenderHitList, int attackDamage, const CreatureAttackData& data) const;
+
+	int applyTanoDamageToCreo(TangibleObject* attacker, WeaponObject* weapon, CreatureObject* defender, DefenderHitList* defenderHitList, int damage, float damageMultiplier, int poolsToDamage, uint8& hitLocation, const CreatureAttackData& data) const;
+
+	int calculateDamageTaken(TangibleObject* attacker, WeaponObject* weapon, CreatureObject* defender, DefenderHitList* hitList, float damage, const CreatureAttackData& data) const;
+
+	int getWeaponCritChance(CreatureObject* creo, WeaponObject* weapon) const;
+
+	int getWeaponIncreasedDamage(CreatureObject* creo, WeaponObject* weapon) const;
+
+	float getWeaponCritDamage(CreatureObject* creo, WeaponObject* weapon) const;
+
+	float getCriticalDamage(CreatureObject* creo, WeaponObject* weapon, int bonusCritDamage = 0, int increasedTotalCritDamage = 0) const;
+
+	bool getCriticalChance(CreatureObject* creo, WeaponObject* weapon, int bonusCrit = 0, int increasedBonusCrit = 0, int increasedTotalCrit = 0) const;
+
+	bool getForceCriticalChance(CreatureObject* creo, int bonusCrit = 0, int increasedBonusCrit = 0, int totalCrit = 0) const;
+
+	float getForceCriticalDamage(CreatureObject* creo, int bonusCritDamage = 0, int increasedTotalCritDamage = 0) const;
+
+	int getDamage(CreatureObject* creo, WeaponObject* weapon, const CreatureAttackData& data, bool base = false, float dmgMulti = 1, int bonusMinDmg = 0, int bonusMaxDmg = 0, int bonusCrit = 0, int increasedBonusCrit = 0, int bonusCritDamage = 0, int increasedTotalCrit = 0, int increasedTotalCritDamage = 0) const;
+
+	float getArmorPenetration(CreatureObject* creo, WeaponObject* weapon, const CreatureAttackData& data, float bonusBaseArp = 0, int bonusIncreaseArp = 0, int bonusTotalArp = 0) const;
+
+	int getAccuracy(CreatureObject* creo, WeaponObject* weapon, const CreatureAttackData& data, int bonusAccuracy = 0, int bonusIncreaseAccuracy = 0, int totalBonusAccuracy = 0) const; 
+
+	bool getAreaActionKaare(CreatureObject* creo, const CreatureAttackData& data) const;
 };
 
 #endif /* COMBATMANAGER_H_ */

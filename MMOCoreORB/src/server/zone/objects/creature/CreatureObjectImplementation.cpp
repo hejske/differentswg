@@ -4566,7 +4566,7 @@ int CreatureObjectImplementation::healDamageAll(TangibleObject* healer,
 
 				if (pet != nullptr && player != nullptr) {
 					pet->setFollowObject(player);
-					pet->activateMovementEvent();
+					pet->activateAiBehavior();
 				}
 			}
 		}
@@ -4686,3 +4686,4 @@ void CreatureObjectImplementation::updateRunSpeedMod(int value) {
 	}
 	creo->setRunSpeed(runSpeed, true);
 }
+
