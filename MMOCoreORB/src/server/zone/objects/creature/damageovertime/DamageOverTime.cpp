@@ -122,7 +122,7 @@ uint32 DamageOverTime::applyDot(CreatureObject* victim) {
 	switch(type) {
 	case CreatureState::BLEEDING:
 		power = doBleedingTick(victim, attacker);
-		nextTick.addMiliTime(1000);
+		nextTick.addMiliTime(3000);
 		break;
 	case CreatureState::POISONED:
 		power = doPoisonTick(victim, attacker);
@@ -130,15 +130,15 @@ uint32 DamageOverTime::applyDot(CreatureObject* victim) {
 		break;
 	case CreatureState::DISEASED:
 		power = doDiseaseTick(victim, attacker);
-		nextTick.addMiliTime(4000);
+		nextTick.addMiliTime(3000);
 		break;
 	case CreatureState::ONFIRE:
 		power = doFireTick(victim, attacker);
-		nextTick.addMiliTime(2000);
+		nextTick.addMiliTime(3000);
 		break;
 	case CommandEffect::FORCECHOKE:
 		power = doForceChokeTick(victim, attacker);
-		nextTick.addMiliTime(2000);
+		nextTick.addMiliTime(3000);
 		break;
 	}
 
@@ -153,11 +153,11 @@ uint32 DamageOverTime::initDot(CreatureObject* victim, CreatureObject* attacker)
 	switch(type) {
 	case CreatureState::BLEEDING:
 		absorptionMod = Math::max(0, Math::min(50, victim->getSkillMod("absorption_bleeding")));
-		nextTick.addMiliTime(1000);
+		nextTick.addMiliTime(3000);
 		break;
 	case CreatureState::ONFIRE:
 		absorptionMod = Math::max(0, Math::min(50, victim->getSkillMod("absorption_fire")));
-		nextTick.addMiliTime(2000);
+		nextTick.addMiliTime(3000);
 		break;
 	case CreatureState::POISONED:
 		absorptionMod = Math::max(0, Math::min(50, victim->getSkillMod("absorption_poison")));
@@ -165,10 +165,10 @@ uint32 DamageOverTime::initDot(CreatureObject* victim, CreatureObject* attacker)
 		break;
 	case CreatureState::DISEASED:
 		absorptionMod = Math::max(0, Math::min(50, victim->getSkillMod("absorption_disease")));
-		nextTick.addMiliTime(4000);
+		nextTick.addMiliTime(3000);
 		break;
 	case CommandEffect::FORCECHOKE:
-		nextTick.addMiliTime(2000);
+		nextTick.addMiliTime(3000);
 		strength *= ((100 - System::random(20)) * 0.01f);
 		victim->showFlyText("combat_effects", "choke", 0xFF, 0, 0);
 
@@ -205,8 +205,14 @@ uint32 DamageOverTime::doBleedingTick(CreatureObject* victim, CreatureObject* at
 				damage *= bleedRes;
 		}
 	}
-	else if (victim->isPet()) {
-		petResistReduction(victim, damage);
+	else if (victim->isAiAgent()) {
+		ManagedReference<AiAgent*> npc = cast<AiAgent*>(victim);
+		if (npc != nullptr) {
+			damage *= (1 - npc->getKinetic() / 100.f);
+			if (victim->isPet()) {
+				petResistReduction(victim, damage);
+			}
+		}
 	}
 
 	if (attr < damage) {
@@ -255,8 +261,14 @@ uint32 DamageOverTime::doFireTick(CreatureObject* victim, CreatureObject* attack
 				damage *= fireRes;
 		}
 	}
-	else if (victim->isPet()) {
-		petResistReduction(victim, damage);
+	else if (victim->isAiAgent()) {
+		ManagedReference<AiAgent*> npc = cast<AiAgent*>(victim);
+		if (npc != nullptr) {
+			damage *= (1 - npc->getHeat() / 100.f);
+			if (victim->isPet()) {
+				petResistReduction(victim, damage);
+			}
+		}
 	}
 
 	if (attr < damage) {
@@ -323,8 +335,14 @@ uint32 DamageOverTime::doPoisonTick(CreatureObject* victim, CreatureObject* atta
 				damage *= poisonRes;
 		}
 	}
-	else if (victim->isPet()) {
-		petResistReduction(victim, damage);
+	else if (victim->isAiAgent()) {
+		ManagedReference<AiAgent*> npc = cast<AiAgent*>(victim);
+		if (npc != nullptr) {
+			damage *= (1 - npc->getAcid() / 100.f);
+			if (victim->isPet()) {
+				petResistReduction(victim, damage);
+			}
+		}
 	}
 
 	if (attr < damage) {
@@ -373,8 +391,14 @@ uint32 DamageOverTime::doDiseaseTick(CreatureObject* victim, CreatureObject* att
 				damage *= diseaseRes;
 		}
 	}
-	else if (victim->isPet()) {
-		petResistReduction(victim, damage);
+	else if (victim->isAiAgent()) {
+		ManagedReference<AiAgent*> npc = cast<AiAgent*>(victim);
+		if (npc != nullptr) {
+			damage *= (1 - npc->getAcid() / 100.f);
+			if (victim->isPet()) {
+				petResistReduction(victim, damage);
+			}
+		}
 	}
 	
 	int maxDamage = victim->getBaseHAM(attribute) - 1 - victim->getWounds(attribute);
@@ -420,8 +444,14 @@ uint32 DamageOverTime::doForceChokeTick(CreatureObject* victim, CreatureObject* 
 	auto attribute = this->attribute;
 	auto strength = this->strength;
 
-	if (victimRef->isPet()) {
-		petResistReduction(victimRef, strength);
+	if (victimRef->isAiAgent()) {
+		ManagedReference<AiAgent*> npc = cast<AiAgent*>(victim);
+		if (npc != nullptr) {
+			strength *= (1 - npc->getLightSaber() / 100.f);
+			if (victim->isPet()) {
+				petResistReduction(victim, strength);
+			}
+		}
 	}
 	else if (victimRef->isPlayerCreature()) {
 		ManagedReference<PlayerObject*> victimPlayer = victimRef->getPlayerObject();
