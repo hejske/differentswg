@@ -922,6 +922,54 @@ public:
 		return dualWieldAttack;
 	}
 
+	int getDamage(CreatureObject* attacker, WeaponObject* weapon, const CreatureAttackData& data, bool base = false) const {
+		return 0;
+	}
+
+	int getArmorPenetration(CreatureObject* attacker, WeaponObject* weapon, const CreatureAttackData& data) const {
+		return 0;
+	}
+
+	int getAccuracy(CreatureObject* attacker, WeaponObject* weapon, const CreatureAttackData& data) const {
+		return 0;
+	}
+
+	bool getAreaAction(CreatureObject* attacker, const CreatureAttackData& data) const {
+		return false;
+	}
+
+	int getAreaSize(CreatureObject* attacker) const {
+		return 0;
+	}
+
+	bool isCone(CreatureObject* attacker) const {
+		return false;
+	}
+
+	int getConeSize(CreatureObject* attacker) const {
+		return 0;
+	}
+
+	int getRangeSize(CreatureObject* attacker) const {
+		return 0;
+	}
+
+	bool isSplash(CreatureObject* attacker) const {
+		return false;
+	}
+
+	// int getMinDamage(CreatureObject* attacker, WeaponObject* weapon, TangibleObject* defender, const CreatureAttackData& data) const {
+	// 	return minDamage;
+	// }
+
+	// float getCritDamage(CreatureObject* attacker, WeaponObject* weapon, TangibleObject* defender, const CreatureAttackData& data) const {
+	// 	return attacker->getCritDamage(weapon, data);
+	// }
+
+	// bool getCrit(CreatureObject* attacker, WeaponObject* weapon, TangibleObject* defender, const CreatureAttackData& data) const {
+	// 	return attacker->getCrit(weapon, data);
+	// }
+
 };
 
 #endif /* COMBATQUEUECOMMAND_H_ */
