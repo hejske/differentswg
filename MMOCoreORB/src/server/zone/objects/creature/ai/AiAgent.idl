@@ -51,7 +51,7 @@ class AiAgent extends CreatureObject {
 
 	public transient boolean lootCollector;
 
-	protected transient AiThinkEvent thinkEvent;
+	//protected transient AiThinkEvent thinkEvent;
 
 	protected transient AiRecoveryEvent recoveryEvent;
 
