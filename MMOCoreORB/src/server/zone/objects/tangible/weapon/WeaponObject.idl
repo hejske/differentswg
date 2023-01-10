@@ -48,14 +48,14 @@ class WeaponObject extends TangibleObject {
 	protected float maxDamage;
 
 //vector<vector3> ?
-	@dereferenced	
-	protected Vector<int> bonusMaxDamage;
+	// @dereferenced	
+	// protected Vector<int> bonusMaxDamage;
 
-	@dereferenced	
-	protected Vector<int> bonusMinDamage;
+	// @dereferenced	
+	// protected Vector<int> bonusMinDamage;
 
-	@dereferenced	
-	protected Vector<int> bonusDamageType;
+	// @dereferenced	
+	// protected Vector<int> bonusDamageType;
 
 	protected float critChance;
 
@@ -629,40 +629,40 @@ class WeaponObject extends TangibleObject {
 		return wearableSkillMods;
 	}
 
-	@read
-	public native int getBonusDamageSize() {
-		return bonusMaxDamage.size();
-	}
+	// @read
+	// public native int getBonusDamageSize() {
+	// 	return bonusMaxDamage.size();
+	// }
 
-	@read
-	public native int getBonusMaxDamage(int index) {
-		return bonusMaxDamage.elementAt(index);
-	}
+	// @read
+	// public native int getBonusMaxDamage(int index) {
+	// 	return bonusMaxDamage.elementAt(index);
+	// }
 
-	@read
-	public native int getBonusMinDamage(int index) {
-		return bonusMinDamage.elementAt(index);
-	}
+	// @read
+	// public native int getBonusMinDamage(int index) {
+	// 	return bonusMinDamage.elementAt(index);
+	// }
 
-	@read
-	public native int getBonusDamageType(int index) {
-		return bonusDamageType.elementAt(index);
-	}
+	// @read
+	// public native int getBonusDamageType(int index) {
+	// 	return bonusDamageType.elementAt(index);
+	// }
 
-	@preLocked
-	public native void addBonusMaxDamage(int t) {
-		bonusMaxDamage.add(t);
-	}
+	// @preLocked
+	// public native void addBonusMaxDamage(int t) {
+	// 	bonusMaxDamage.add(t);
+	// }
 
-	@preLocked
-	public native void addBonusMinDamage(int t) {
-		bonusMinDamage.add(t);
-	}
+	// @preLocked
+	// public native void addBonusMinDamage(int t) {
+	// 	bonusMinDamage.add(t);
+	// }
 
-	@preLocked
-	public void addBonusDamageType(int t) {
-		bonusDamageType.add(t);
-	}
+	// @preLocked
+	// public void addBonusDamageType(int t) {
+	// 	bonusDamageType.add(t);
+	// }
 
 	@read
 	public native float getCritChance() {

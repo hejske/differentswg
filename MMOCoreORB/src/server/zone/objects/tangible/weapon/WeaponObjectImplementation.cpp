@@ -263,8 +263,6 @@ void WeaponObjectImplementation::fillAttributeList(AttributeListMessage* alm, Cr
 
 	alm->insertAttribute("wpn_crit_chance", getCritChance());
 
-
-
 	alm->insertAttribute("wpn_attack_speed", Math::getPrecision(getAttackSpeed(), 1));
 
 	if (getDamageRadius() != 0.0f)
@@ -447,48 +445,48 @@ void WeaponObjectImplementation::fillAttributeList(AttributeListMessage* alm, Cr
 		//alm->insertAttribute(use.toString(), getDotUses(i));
 	}
 
-	for (int i = 0; i < getBonusDamageSize(); i++) {
+	// for (int i = 0; i < getBonusDamageSize(); i++) {
 
-		StringBuffer dmgtxt;
+	// 	StringBuffer dmgtxt;
 
-		int minDmg = getBonusMinDamage(i);
-		int maxDmg = getBonusMaxDamage(i);
+	// 	int minDmg = getBonusMinDamage(i);
+	// 	int maxDmg = getBonusMaxDamage(i);
 
-		dmgtxt << minDmg << " - " << maxDmg;
+	// 	dmgtxt << minDmg << " - " << maxDmg;
 
-		switch (getBonusDamageType(i)) {
-			case SharedWeaponObjectTemplate::KINETIC:
-				dmgtxt << " Kinetic";
-				break;
-			case SharedWeaponObjectTemplate::ENERGY:
-				dmgtxt << " Energy";
-				break;
-			case SharedWeaponObjectTemplate::ELECTRICITY:
-				dmgtxt << " Electricity";
-				break;
-			case SharedWeaponObjectTemplate::STUN:
-				dmgtxt << " Stun";
-				break;
-			case SharedWeaponObjectTemplate::BLAST:
-				dmgtxt << " Blast";
-				break;
-			case SharedWeaponObjectTemplate::HEAT:
-				dmgtxt << " Heat";
-				break;
-			case SharedWeaponObjectTemplate::COLD:
-				dmgtxt << " Cold";
-				break;
-			case SharedWeaponObjectTemplate::ACID:
-				dmgtxt << " Acid";
-				break;
-			case SharedWeaponObjectTemplate::LIGHTSABER:
-				dmgtxt << " Lightsaber";
-				break;
-			default:
-				dmgtxt << "Unknown";
-				break;
-		}
-	}
+	// 	switch (getBonusDamageType(i)) {
+	// 		case SharedWeaponObjectTemplate::KINETIC:
+	// 			dmgtxt << " Kinetic";
+	// 			break;
+	// 		case SharedWeaponObjectTemplate::ENERGY:
+	// 			dmgtxt << " Energy";
+	// 			break;
+	// 		case SharedWeaponObjectTemplate::ELECTRICITY:
+	// 			dmgtxt << " Electricity";
+	// 			break;
+	// 		case SharedWeaponObjectTemplate::STUN:
+	// 			dmgtxt << " Stun";
+	// 			break;
+	// 		case SharedWeaponObjectTemplate::BLAST:
+	// 			dmgtxt << " Blast";
+	// 			break;
+	// 		case SharedWeaponObjectTemplate::HEAT:
+	// 			dmgtxt << " Heat";
+	// 			break;
+	// 		case SharedWeaponObjectTemplate::COLD:
+	// 			dmgtxt << " Cold";
+	// 			break;
+	// 		case SharedWeaponObjectTemplate::ACID:
+	// 			dmgtxt << " Acid";
+	// 			break;
+	// 		case SharedWeaponObjectTemplate::LIGHTSABER:
+	// 			dmgtxt << " Lightsaber";
+	// 			break;
+	// 		default:
+	// 			dmgtxt << "Unknown";
+	// 			break;
+	// 	}
+	// }
 
 
 	if (hasPowerup())
